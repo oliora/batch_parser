@@ -28,6 +28,8 @@
 		59B1174E17929A470009E5C0 /* batch_parser */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = batch_parser; sourceTree = BUILT_PRODUCTS_DIR; };
 		59B1175117929A470009E5C0 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		59B1175317929A480009E5C0 /* batch_parser.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = batch_parser.1; sourceTree = "<group>"; };
+		59B1175A1792A68A0009E5C0 /* parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
+		59B1175B1793E87D0009E5C0 /* parser2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser2.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,7 +63,9 @@
 			isa = PBXGroup;
 			children = (
 				59B1175117929A470009E5C0 /* main.cpp */,
+				59B1175A1792A68A0009E5C0 /* parser.h */,
 				59B1175317929A480009E5C0 /* batch_parser.1 */,
+				59B1175B1793E87D0009E5C0 /* parser2.h */,
 			);
 			path = batch_parser;
 			sourceTree = "<group>";
@@ -150,6 +154,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/local/Cellar/boost/1.51.0/include;
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -176,6 +181,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/local/Cellar/boost/1.51.0/include;
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				SDKROOT = macosx;
 			};
