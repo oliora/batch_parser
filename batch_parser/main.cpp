@@ -6,7 +6,7 @@
 //  Copyright (c) 2013 Andrey Upadyshev. All rights reserved.
 //
 
-#include "parser2.h"
+#include "parser.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -52,7 +52,7 @@ int main(int argc, const char * argv[])
         
         //std::cout.write(&buf.front(), buf.size());
     
-        batch_parser2::parse(buf.begin(), buf.end());
+        batch_parser::parse(buf.begin(), buf.end());
     }
     catch (const std::exception& ex)
     {

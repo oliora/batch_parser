@@ -24,7 +24,7 @@
 #include <string>
 
 
-namespace batch_parser2
+namespace batch_parser
 {
     namespace detail
     {
