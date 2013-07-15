@@ -1,0 +1,34 @@
+Notes
+-----
+
+# & at the end of line is skipped, &&, || or | at the end of line give an error (DONE)
+
+# there is no special meaning of |&<>^() inside double quotes (TODO)
+
+# escape special chars with ^  (TODO)
+
+# combine long lines by ^\n (TODO)
+
+# parse labels (TODO) format?
+
+# parse redirects (TODO) format?
+
+# ^( - escapes opening bracket. ) treated as matched closing bracked (if is) or as a normal character (TODO)
+
+# fix # of @ (TODO?)
+
+
+Links
+-----
+
+Escaping: http://www.robvanderwoude.com/escapechars.php
+
+
+EBNF
+----
+
+arg = ( [^\s"<>\|&\^] | (\^[.$]) | ("[^"]*") )+
+
+
+command := redirect? arg+
+           arg+ redirect?
