@@ -196,8 +196,9 @@ namespace batch_parser
 
         detail::printComandsList(commands);
         
+        std::cout << "@@@ " << atMarkCount << " @@@" << std::endl;
+
         std::cout << (r ? "OK" : "FAIL") << std::endl;
-        std::cout << "Dogs: " << atMarkCount << std::endl;
         
         if (first != last)
         {
