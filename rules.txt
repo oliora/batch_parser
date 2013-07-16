@@ -21,10 +21,18 @@ Notes
 
 # TODO parse redirects (format?)
 
+#TODO parse if and extract commands under it
+
+#TODO parse for and extract commands under it
+
 # TODO? ending spaces in quoted params which ends because of EOL/EOF should be cut:
   'call "123 456   ' => %1 is '"123 456' (note ending spaces)
 
-# TODO ^" opens a strange type of quoted arg: 
+#TODO? parse echo specially
+
+#TODO? parse rem specially (all the args into one command)
+
+# TODO? ^" opens a strange type of quoted arg: 
     - spaces allowed inside
     - arg finished at first special char
     - if closing double quote present - execution stopped
