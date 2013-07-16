@@ -49,6 +49,21 @@ namespace batch_parser
             }
         };
         
+        struct DebugPrinter
+        {
+            template <typename C>
+            struct result
+            {
+                typedef void type;
+            };
+
+            template <typename C>
+            void operator()(C arg) const
+            {
+                std::cout << arg << std::endl;
+            }
+        };
+        
         void printComandsList(const CommandsList& cmds)
         {
             BOOST_FOREACH(const CommandWithArgs& cmd, cmds)
@@ -69,9 +84,11 @@ namespace batch_parser
                 }
             }
         }
-        
+                
         typedef boost::spirit::ascii::space_type Skipper;
         
+        boost::phoenix::function<Appender> const append;
+        boost::phoenix::function<DebugPrinter> const dbg;
         
         template <typename Iterator>
         struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, CommandsList(), Skipper>
@@ -92,56 +109,65 @@ namespace batch_parser
                 using ascii::space;
                 using namespace qi::labels;
                 using boost::spirit::eol;
+                using boost::spirit::eps;
                 using boost::spirit::eoi;
                 using boost::spirit::hold;
                 using boost::spirit::no_skip;
                 
                 
-                boost::phoenix::function<Appender> const append;
                 
-                arg =
-                    lexeme[+char_("a-zA-Z0-9_-")[_val += _1]];
+                arg %= lexeme[
+                              +(char_ - (  space
+                                         | '&'
+                                         | '|'
+                                         | '"'
+                                         | '^'
+                                         | (eps(phoenix::ref(bracketsLevel) != 0) >> ')')
+                                         )
+                                )
+                              ];
                 
-                command = (arg[phoenix::push_back(_val, _1)] % +blank);// - (eol | eoi | "&&" | "||" | '&' | '|');
+                command =
+                       !char_('(')
+                    >> (arg                 [phoenix::push_back(_val, _1)]
+                        % +blank);
                 
                 group =
-                    char_('(') >> expression[append(_val, _1)] >> char_(')');
+                       char_('(')[phoenix::ref(bracketsLevel) += 1]
+                    >> expression           [append(_val, _1)]
+                    >> char_(')')[phoenix::ref(bracketsLevel) -= 1];
                 
                 operation =
-                    (command[phoenix::push_back(_val, _1)] | group[append(_val, _1)]) >>
-                        no_skip[*blank >> (eol | ((lit("&&") | "||"  | '|') >> *blank >> !eol) | char_('&'))] >>
-                        expression[append(_val, _1)];
+                    ((  lit("&&")
+                      | "||"
+                      | '|'
+                      )
+                     >> *blank
+                     >> !eol
+                     )
+                    | char_('&');
+
+                operand = *char_('@')
+                    >> (  group             [append(_val, _1)]
+                        | command           [phoenix::push_back(_val, _1)]
+                        );
                 
-                // TODO: fix dogs counter (why it's too big number?)
-                expression = *char_('@')[phoenix::ref(atMarkCount) += 1] >> (
-                    operation[append(_val, _1)] |
-                    command[phoenix::push_back(_val, _1)] |
-                    group[append(_val, _1)]);
+                expression = operand % no_skip[*blank >> (eol | eoi | operation)];
                 
-                
-                batch = *(expression[append(_val, _1)] | +space) >>
-                    *char_(')'); // #crazy_bat: any amount of extra closing brackets are allowed at the end of file
-                
-//                on_error<fail>
-//                (
-//                    batch
-//                    , std::cout
-//                        << phoenix::val("Error! Expecting ")
-//                        << _4                               // what failed?
-//                        << phoenix::val(" here: \"")
-//                        << phoenix::construct<std::string>(_3, _2)   // iterators to error-pos, end
-//                        << phoenix::val("\"")
-//                        << std::endl
-//                );
-                
-//                BOOST_SPIRIT_DEBUG_NODE(batch);
+                batch = eps                 [phoenix::ref(bracketsLevel) = 0]
+                    >> *(  expression       [append(_val, _1)]
+                         | +space
+                         )
+                    >> *char_(')'); // #crazy_bat: any amount of extra closing brackets are allowed at the end of file
             }
             
+            long bracketsLevel;
             boost::spirit::qi::rule<Iterator, std::string()> arg;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> command;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> expression;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> group;
-            boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> operation;
+            boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> operand;
+            boost::spirit::qi::rule<Iterator> operation;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> batch;
         };
         
