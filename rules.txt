@@ -1,34 +1,53 @@
 Notes
 -----
 
-# & at the end of line is skipped, &&, || or | at the end of line give an error (DONE)
+# DONE & at the end of line is skipped, &&, || or | at the end of line give an error
 
-# there is no special meaning of |&<>^() inside double quotes (TODO)
+# DONE |&<>^() has no special meaning inside double quotes
 
-# escape special chars with ^  (TODO)
+# DONE ) treated as matched closing bracket (if unclosed one exists) or as a normal character
 
-# combine long lines by ^\n (TODO)
+# TODO ^ escapes special chars |&<>() and @,
 
-# parse labels (TODO) format?
+# TODO before any other char skipped, so ^X => X, ^^ => ^
 
-# parse redirects (TODO) format?
+# TODO: ^ escapes special meaning of " until special handling
+  of ^"...^" strings implemented (see below). Not it's not batch file behavior
+  but quick workaround.
 
-# ^( - escapes opening bracket. ) treated as matched closing bracked (if is) or as a normal character (TODO)
+# TODO combine long lines by ^\n
 
-# fix # of @ (TODO?)
+# TODO parse labels (format?)
 
+# TODO parse redirects (format?)
+
+# TODO? ending spaces in quoted params which ends because of EOL/EOF should be cut:
+  'call "123 456   ' => %1 is '"123 456' (note ending spaces)
+
+# TODO ^" opens a strange type of quoted arg: 
+    - spaces allowed inside
+    - arg finished at first special char
+    - if closing double quote present - execution stopped
+    - if closing with ^" then no problem
+    - if no double quote or special char found, line finished at 
+      EOL/EOF as normal double quoted arg (i.e. at last non empty char in fact)
+    
+  call :print ^"12 34           ^
+  echo 23 " 24
+  =>
+  call with %1 = '"12 34           echo 23 "', %2 = '24'
+  
+  call :print 12 ^" 34       & echo 23
+  =>
+  call: %1=12, %2:" 34, %3=,
+  23
+  
+  call :print 12 ^" 34   "    & echo 23
+  =>
+  nothing outputed
 
 Links
 -----
 
 Escaping: http://www.robvanderwoude.com/escapechars.php
 
-
-EBNF
-----
-
-arg = ( [^\s"<>\|&\^] | (\^[.$]) | ("[^"]*") )+
-
-
-command := redirect? arg+
-           arg+ redirect?

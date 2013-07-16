@@ -112,30 +112,36 @@ namespace batch_parser
                 using boost::spirit::eps;
                 using boost::spirit::eoi;
                 using boost::spirit::hold;
+                using boost::spirit::omit;
+                using boost::spirit::raw;
                 using boost::spirit::no_skip;
-                
-                
-                
+
+
                 arg %= lexeme[
-                              +(char_ - (  space
-                                         | '&'
-                                         | '|'
-                                         | '"'
-                                         | '^'
-                                         | (eps(phoenix::ref(bracketsLevel) != 0) >> ')')
-                                         )
+                              +(
+                                   (char_ - (  space
+                                            | '&'
+                                            | '|'
+                                            | '\"'
+                                            | '^'
+                                            | (eps(phoenix::ref(bracketsLevel) != 0) >> ')')
+                                            )
+                                    )
+                                 | raw[(   char_('\"')
+                                        >> *(char_ - (char_('\"') | eol | eoi))
+                                        >> (char_('\"') | eps)
+                                        )
+                                       ]
                                 )
                               ];
                 
-                command =
-                       !char_('(')
-                    >> (arg                 [phoenix::push_back(_val, _1)]
-                        % +blank);
+                command = arg               [phoenix::push_back(_val, _1)]
+                    % +blank;
                 
                 group =
-                       char_('(')[phoenix::ref(bracketsLevel) += 1]
+                       char_('(')           [phoenix::ref(bracketsLevel) += 1]
                     >> expression           [append(_val, _1)]
-                    >> char_(')')[phoenix::ref(bracketsLevel) -= 1];
+                    >> char_(')')           [phoenix::ref(bracketsLevel) -= 1];
                 
                 operation =
                     ((  lit("&&")
@@ -147,21 +153,19 @@ namespace batch_parser
                      )
                     | char_('&');
 
-                operand = *char_('@')
+                operand = *char_('@')       [phoenix::ref(atMarkCount) += 1]
                     >> (  group             [append(_val, _1)]
                         | command           [phoenix::push_back(_val, _1)]
                         );
                 
-                expression = operand % no_skip[*blank >> (eol | eoi | operation)];
+                expression = operand
+                    % no_skip[*blank >> (eol | eoi | operation)];
                 
                 batch = eps                 [phoenix::ref(bracketsLevel) = 0]
-                    >> *(  expression       [append(_val, _1)]
-                         | +space
-                         )
-                    >> *char_(')'); // #crazy_bat: any amount of extra closing brackets are allowed at the end of file
+                    >> *expression          [append(_val, _1)];
             }
             
-            long bracketsLevel;
+            long bracketsLevel; // TODO: move into high level attribute?
             boost::spirit::qi::rule<Iterator, std::string()> arg;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> command;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> expression;
