@@ -149,11 +149,10 @@ namespace batch_parser
                     ((  lit("&&")
                       | "||"
                       | '|'
+                      | '&'
                       )
-                     >> *blank
-                     >> !eol
-                     )
-                    | char_('&');
+                     >> -(*blank >> !eol)
+                     );
 
                 operand = *char_('@')       [phoenix::ref(atMarkCount) += 1]
                     >> (  group             [append(_val, _1)]
@@ -170,6 +169,7 @@ namespace batch_parser
 	    long bracketsLevel; // TODO: move into high level attribute
             boost::spirit::qi::rule<Iterator, std::string()> arg;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> command;
+            boost::spirit::qi::rule<Iterator, Skipper> label; // TODO: count labels
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> expression;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> group;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> operand;
