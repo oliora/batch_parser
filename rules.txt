@@ -1,7 +1,9 @@
 Notes
 -----
 
-# DONE & at the end of line is skipped, &&, || or | at the end of line give an error
+# DONE & at the end of line is skipped, &&, || or | at the end of line give an error.
+  NOT CONFORM behavior: &&, || and | don't give an error at EOL.
+  They are processed in the same way as &.
 
 # DONE |&<>^() has no special meaning inside double quotes
 
@@ -15,9 +17,26 @@ Notes
 
 # DONE: ^ escapes special meaning of " until special handling
   of ^"...^" strings implemented (see below).
-  Note it's WORKAROUND.
+  Note it's NOT CONFORM behavior.
 
-# TODO parse labels (format?)
+# TODO parse labels. Label formats:
+  '[any_char](blank)*:(blank)*(label_name)(blank)...'
+  - label_name is a char sequence till first blank including quotes etc:
+    'name' => 'name'
+    '"name"; => '"name"'
+    '"long name"' => '"long'
+    'spe^&ial' => 'spe&ial'
+    '"spe^&ial"' => '"spe&ial'
+
+  - rest of label string is ignored
+  - spaces are allowed before and after ':'
+  - any single char including @ and special chars is allowed at the 
+    first char of label string (before spaces and ':')
+  - label name should not be double quoted as normal arg. here, the double quote
+    means just an ordinal char. note that 
+  - caret is allowed right before or inside the label_name.
+    it escaping the next char.
+    caret is not allowed in blanks before and after ':'.
 
 # TODO parse redirects (format?)
 
