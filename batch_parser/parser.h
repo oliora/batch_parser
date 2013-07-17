@@ -93,6 +93,7 @@ namespace batch_parser
         template <typename Iterator>
         struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, CommandsList(), Skipper>
         {
+	    // TODO: move atMarkCount into high level attibute
             BatchFileGrammar(size_t& atMarkCount) : BatchFileGrammar::base_type(batch)
             {
                 namespace qi = boost::spirit::qi;
@@ -127,8 +128,9 @@ namespace batch_parser
                                             | (eps(phoenix::ref(bracketsLevel) != 0) >> ')')
                                             )
                                     )
+                                 | (omit[char_('^')] >> (omit[eol | eoi] | char_))
                                  | raw[(   char_('\"')
-                                        >> *(char_ - (char_('\"') | eol | eoi))
+                                        >> *(char_ - (char_('\"') | omit[eol] | omit[eoi]))
                                         >> (char_('\"') | eps)
                                         )
                                        ]
@@ -165,7 +167,7 @@ namespace batch_parser
                     >> *expression          [append(_val, _1)];
             }
             
-            long bracketsLevel; // TODO: move into high level attribute?
+	    long bracketsLevel; // TODO: move into high level attribute
             boost::spirit::qi::rule<Iterator, std::string()> arg;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> command;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> expression;
