@@ -116,6 +116,7 @@ namespace batch_parser
                 using boost::spirit::omit;
                 using boost::spirit::raw;
                 using boost::spirit::no_skip;
+                using boost::spirit::skip;
 
 
                 arg %= lexeme[
@@ -131,19 +132,21 @@ namespace batch_parser
                                  | (omit[char_('^')] >> -(omit[eol] | omit[eoi] | (char_ - blank)))
                                  | raw[(   char_('\"')
                                         >> *(char_ - (char_('\"') | eol | eoi))
-                                        >> (char_('\"') | eps)
+                                        >> -(char_('\"'))
                                         )
-                                       ]
+                                       ] // I don't know why, but w/o raw[], rule consumes some unprintable char on EOL/EOF
                                 )
                               ];
                 
-                command = arg               [phoenix::push_back(_val, _1)]
-                    % +blank;
+                command %= skip(blank)[+arg];
                 
                 group =
                        char_('(')           [phoenix::ref(bracketsLevel) += 1]
-                    >> expression           [append(_val, _1)]
-                    >> char_(')')           [phoenix::ref(bracketsLevel) -= 1];
+                    >> *expression          [append(_val, _1)]
+                    >> char_(')')           [phoenix::ref(bracketsLevel) -= 1]
+                    >> -(   eps(phoenix::ref(bracketsLevel) == 0) // eat all extra closing brackets
+                         >> *char_(')')
+                         );
                 
                 operation =
                     ((  lit("&&")
@@ -151,29 +154,33 @@ namespace batch_parser
                       | '|'
                       | '&'
                       )
-                     >> -(*blank >> !eol)
                      );
 
-                operand = *char_('@')       [phoenix::ref(atMarkCount) += 1]
+                operand =
+                       *char_('@')          [phoenix::ref(atMarkCount) += 1]
                     >> (  group             [append(_val, _1)]
                         | command           [phoenix::push_back(_val, _1)]
                         );
                 
-                expression = operand
-                    % no_skip[*blank >> (eol | eoi | operation)];
+                expression =
+                       operand
+                    >> *(   operation
+                         >> -expression // we would be tolerate to errors as much as possible
+                         );
                 
-                batch = eps                 [phoenix::ref(bracketsLevel) = 0]
-                    >> *expression          [append(_val, _1)];
+                batch =
+                       eps                  [phoenix::ref(bracketsLevel) = 0]
+                    >> *(expression         [append(_val, _1)]);
             }
             
-	    long bracketsLevel; // TODO: move into high level attribute
+            long bracketsLevel; // TODO: move into high level attribute!!!
             boost::spirit::qi::rule<Iterator, std::string()> arg;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> command;
             boost::spirit::qi::rule<Iterator, Skipper> label; // TODO: count labels
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> expression;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> group;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> operand;
-            boost::spirit::qi::rule<Iterator> operation;
+            boost::spirit::qi::rule<Iterator, Skipper> operation;
             boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> batch;
         };
         
@@ -204,7 +211,7 @@ namespace batch_parser
         
         if (first != last)
         {
-            std::cout << "Can't parse the following: " << std::endl << std::string(first, last) << std::endl;
+            std::cerr << "Can't parse the following: " << std::endl << std::string(first, last) << std::endl;
             return false;
         }
         
