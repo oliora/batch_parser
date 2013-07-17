@@ -128,9 +128,9 @@ namespace batch_parser
                                             | (eps(phoenix::ref(bracketsLevel) != 0) >> ')')
                                             )
                                     )
-                                 | (omit[char_('^')] >> (omit[eol | eoi] | char_))
+                                 | (omit[char_('^')] >> -(omit[eol] | omit[eoi] | (char_ - blank)))
                                  | raw[(   char_('\"')
-                                        >> *(char_ - (char_('\"') | omit[eol] | omit[eoi]))
+                                        >> *(char_ - (char_('\"') | eol | eoi))
                                         >> (char_('\"') | eps)
                                         )
                                        ]

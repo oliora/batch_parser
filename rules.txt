@@ -7,36 +7,37 @@ Notes
 
 # DONE ) treated as matched closing bracket (if unclosed one exists) or as a normal character
 
-# TODO ^ escapes special chars |&<>() and @,
+# DONE ^ escapes special chars |&<>() and @,
 
-# TODO before any other char skipped, so ^X => X, ^^ => ^
+# DONE before any other char skipped, so ^X => X, ^^ => ^, echo before space just skipped
 
-# TODO: ^ escapes special meaning of " until special handling
-  of ^"...^" strings implemented (see below). Not it's not batch file behavior
-  but quick workaround.
+# DONE combine long lines by ^\n
 
-# TODO combine long lines by ^\n
+# DONE: ^ escapes special meaning of " until special handling
+  of ^"...^" strings implemented (see below).
+  Note it's WORKAROUND.
 
 # TODO parse labels (format?)
 
 # TODO parse redirects (format?)
 
-#TODO parse if and extract commands under it
+# TODO parse if and extract commands under it
 
-#TODO parse for and extract commands under it
+# TODO parse for and extract commands under it
 
 # TODO? ending spaces in quoted params which ends because of EOL/EOF should be cut:
   'call "123 456   ' => %1 is '"123 456' (note ending spaces)
+  Could be solved by stripping out ending spaces for all params
 
-#TODO? parse echo specially
+# TODO? parse echo specially (all the args into one command)
 
 #TODO? parse rem specially (all the args into one command)
 
 # TODO? ^" opens a strange type of quoted arg: 
     - spaces allowed inside
+    - arg should be closed with ^"
     - arg finished at first special char
-    - if closing double quote present - execution stopped
-    - if closing with ^" then no problem
+    - if double quote found inside - execution stopped - 
     - if no double quote or special char found, line finished at 
       EOL/EOF as normal double quoted arg (i.e. at last non empty char in fact)
     
