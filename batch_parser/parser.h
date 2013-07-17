@@ -111,7 +111,6 @@ namespace batch_parser
                 using namespace qi::labels;
                 using boost::spirit::eol;
                 using boost::spirit::eps;
-                using boost::spirit::eoi;
                 using boost::spirit::hold;
                 using boost::spirit::omit;
                 using boost::spirit::raw;
@@ -129,9 +128,9 @@ namespace batch_parser
                                             | (eps(phoenix::ref(bracketsLevel) != 0) >> ')')
                                             )
                                     )
-                                 | (omit[char_('^')] >> -(omit[eol] | omit[eoi] | (char_ - blank)))
+                                 | (omit[char_('^')] >> -(omit[eol] | (char_ - blank)))
                                  | raw[(   char_('\"')
-                                        >> *(char_ - (char_('\"') | eol | eoi))
+                                        >> *(char_ - (char_('\"') | eol))
                                         >> -(char_('\"'))
                                         )
                                        ] // I don't know why, but w/o raw[], rule consumes some unprintable char on EOL/EOF
