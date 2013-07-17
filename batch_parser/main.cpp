@@ -17,12 +17,12 @@ namespace
     
     Buffer readFile(const char *filename)
     {
-        std::ifstream is(filename);
+        std::ifstream is(filename, std::ios::binary);
         
         if (!is)
             throw std::runtime_error("Can not open file");
         
-        is.unsetf(std::ios::skipws);
+        //is.unsetf(std::ios::skipws);
         
         is.seekg(0, std::ios_base::end);
         

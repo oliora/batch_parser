@@ -31,7 +31,7 @@ namespace batch_parser
         // TODO: CommandWithArgs must be a shared_ptr<std::vector<std::string> >
         // to reduce copy
         typedef std::vector<std::string> CommandWithArgs;
-        typedef std::vector<CommandWithArgs> CommandsList;
+        //typedef std::vector<CommandWithArgs> CommandsList;
         
         
         struct Appender
@@ -64,7 +64,7 @@ namespace batch_parser
             }
         };
         
-        void printComandsList(const CommandsList& cmds)
+        /*void printComandsList(const CommandsList& cmds)
         {
             BOOST_FOREACH(const CommandWithArgs& cmd, cmds)
             {
@@ -83,6 +83,28 @@ namespace batch_parser
                     std::cout << "  " << *first << "," << std::endl;
                 }
             }
+        }*/
+                
+        void printCmd(const CommandWithArgs& cmd)
+        {
+            if (cmd.empty())
+            {
+                return;
+            }
+                
+            CommandWithArgs::const_iterator first = cmd.begin();
+            std::cout << *first << ":" << std::endl;
+            ++first;
+            
+            for(;first != cmd.end(); ++first)
+            {
+                std::cout << "  " << *first << "," << std::endl;
+            }
+        }
+                
+        void printLabel(const std::string& label)
+        {
+            std::cout << ":" << label << std::endl;
         }
                 
         typedef boost::spirit::ascii::space_type Skipper;
@@ -91,10 +113,12 @@ namespace batch_parser
         boost::phoenix::function<DebugPrinter> const dbg;
         
         template <typename Iterator>
-        struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, CommandsList(), Skipper>
+        struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, Skipper>
         {
-	    // TODO: move atMarkCount into high level attibute
-            BatchFileGrammar(size_t& atMarkCount) : BatchFileGrammar::base_type(batch)
+            // TODO: move atMarkCount into high level attibute
+            template<typename CommandAction, typename LabelAction>
+            BatchFileGrammar(size_t& atMarkCount, CommandAction cmdAction, LabelAction labelAction)
+                : BatchFileGrammar::base_type(batch)
             {
                 namespace qi = boost::spirit::qi;
                 namespace ascii = boost::spirit::ascii;
@@ -109,13 +133,17 @@ namespace batch_parser
                 using ascii::blank;
                 using ascii::space;
                 using namespace qi::labels;
+                using boost::spirit::attr;
                 using boost::spirit::eol;
                 using boost::spirit::eps;
                 using boost::spirit::hold;
                 using boost::spirit::omit;
                 using boost::spirit::raw;
+                using boost::spirit::hold;
                 using boost::spirit::no_skip;
                 using boost::spirit::skip;
+                using phoenix::push_back;
+                using phoenix::ref;
 
 
                 arg %= lexeme[
@@ -125,26 +153,47 @@ namespace batch_parser
                                             | '|'
                                             | '\"'
                                             | '^'
-                                            | (eps(phoenix::ref(bracketsLevel) != 0) >> ')')
+                                            | (
+                                                  eps(ref(bracketsLevel) != 0)
+                                               >> ')' // catch extra closing brackets
+                                               )
                                             )
                                     )
-                                 | (omit[char_('^')] >> -(omit[eol] | (char_ - blank)))
+                                 | (   lit('^')
+                                    >> -(  (omit[eol] >> -((!eol >> char_) | (eol >> attr('\r') >> attr('\n'))))
+                                         | (char_ - blank)
+                                         )
+                                    )
                                  | raw[(   char_('\"')
                                         >> *(char_ - (char_('\"') | eol))
                                         >> -(char_('\"'))
                                         )
-                                       ] // I don't know why, but w/o raw[], rule consumes some unprintable char on EOL/EOF
+                                       ] // I don't know why, but w/o raw[], the rule consumes some unprintable char on EOL/EOF
                                 )
                               ];
                 
-                command %= skip(blank)[+arg];
+                command %= skip(blank)
+                [
+                       !char_(':') // to do not capture labels
+                    >> +arg
+                 ];
+                
+                label %= skip(blank)
+                [
+                       omit[   -(char_ - ':')
+                            >> ':']
+                    >> lexeme[+(char_ - space)]
+                    >> omit[*(char_ - eol)]
+                 ];
+                
+                at_mark = char_('@')        [ref(atMarkCount) += 1];
                 
                 group =
-                       char_('(')           [phoenix::ref(bracketsLevel) += 1]
-                    >> *expression          [append(_val, _1)]
-                    >> char_(')')           [phoenix::ref(bracketsLevel) -= 1]
-                    >> -(   eps(phoenix::ref(bracketsLevel) == 0) // eat all extra closing brackets
-                         >> *char_(')')
+                       char_('(')           [ref(bracketsLevel) += 1]
+                    >> *expression
+                    >> char_(')')           [ref(bracketsLevel) -= 1]
+                    >> -(   eps(ref(bracketsLevel) == 0)
+                         >> omit[*char_(')')] // skip all extra closing brackets
                          );
                 
                 operation =
@@ -156,31 +205,33 @@ namespace batch_parser
                      );
 
                 operand =
-                       *char_('@')          [phoenix::ref(atMarkCount) += 1]
-                    >> (  group             [append(_val, _1)]
-                        | command           [phoenix::push_back(_val, _1)]
+                       omit[*at_mark]
+                    >> (  group
+                        | command           [cmdAction]
+                        | label             [labelAction] // TODO: Don't match label if it's not at the begin of line
                         );
                 
                 expression =
                        operand
                     >> *(   operation
-                         >> -expression // we would be tolerate to errors as much as possible
+                         >> -expression // we are tolerant to errors as much as possible
                          );
                 
                 batch =
-                       eps                  [phoenix::ref(bracketsLevel) = 0]
-                    >> *(expression         [append(_val, _1)]);
+                       eps                  [ref(bracketsLevel) = 0]
+                    >> *(expression);
             }
             
-            long bracketsLevel; // TODO: move into high level attribute!!!
+            long bracketsLevel; // TODO: move into attributes
             boost::spirit::qi::rule<Iterator, std::string()> arg;
-            boost::spirit::qi::rule<Iterator, CommandWithArgs()> command;
-            boost::spirit::qi::rule<Iterator, Skipper> label; // TODO: count labels
-            boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> expression;
-            boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> group;
-            boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> operand;
+            boost::spirit::qi::rule<Iterator, CommandWithArgs()> command; // It have to has blank_type skipper, but compilation fails in such case. Why?
+            boost::spirit::qi::rule<Iterator, std::string()> label; // It have to has blank_type skipper, but compilation fails in such case. Why?
+            boost::spirit::qi::rule<Iterator, Skipper> expression;
+            boost::spirit::qi::rule<Iterator, Skipper> group;
+            boost::spirit::qi::rule<Iterator, Skipper> operand;
+            boost::spirit::qi::rule<Iterator, Skipper> at_mark;
             boost::spirit::qi::rule<Iterator, Skipper> operation;
-            boost::spirit::qi::rule<Iterator, CommandsList(), Skipper> batch;
+            boost::spirit::qi::rule<Iterator, Skipper> batch;
         };
         
     }
@@ -192,18 +243,17 @@ namespace batch_parser
         namespace ascii = boost::spirit::ascii;
         namespace phoenix = boost::phoenix;
         
-        detail::CommandsList commands;
         size_t atMarkCount = 0;
+        detail::BatchFileGrammar<Iterator> grammar(atMarkCount, detail::printCmd, detail::printLabel);
+        
+        
         bool r = phrase_parse(
                               first,
                               last,
-                              detail::BatchFileGrammar<Iterator>(atMarkCount),
-                              detail::Skipper(),
-                              commands
+                              grammar,
+                              detail::Skipper()
                               );
 
-        detail::printComandsList(commands);
-        
         std::cout << "@@@ " << atMarkCount << " @@@" << std::endl;
 
         std::cout << (r ? "OK" : "FAIL") << std::endl;

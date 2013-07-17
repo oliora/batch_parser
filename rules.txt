@@ -15,6 +15,15 @@ Notes
 
 # DONE combine long lines by ^\n
 
+# TODO ^\n should be handled not only in command:
+  (^
+  (cmd)) is a valid case
+
+# DONE strange case with ^\n: \n just skipped, so ^ will act over next line char:
+  echo 12 ^
+  & echo 14
+  treated as 'echo 12 ^& echo 14'
+
 # DONE: ^ escapes special meaning of " until special handling
   of ^"...^" strings implemented (see below).
   Note it's NOT CONFORM behavior.
@@ -37,6 +46,9 @@ Notes
   - caret is allowed right before or inside the label_name.
     it escaping the next char.
     caret is not allowed in blanks before and after ':'.
+    
+    Fuck my brains case:
+    'c:\windows' is a valid label which could be called with 'call :\windows'.
 
 # TODO parse redirects (format?)
 
