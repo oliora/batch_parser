@@ -37,3 +37,10 @@ How to build
 
 3. Build generated solution/project either with you favourite compiler or with CMake
    `cmake --build . [--config Release|Debug]`.
+
+License
+-------
+
+Released to Public Domain.
+
+**This produc has absolutely no warranty for anything!**
