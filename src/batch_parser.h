@@ -1,13 +1,9 @@
-//
-//  parser2.h
-//  batch_parser
-//
-//  Created by Andrey Upadyshev on 15.07.13.
-//  Copyright (c) 2013 Andrey Upadyshev. All rights reserved.
-//
+//  Created by Andrey Upadyshev aka Oliora.
+//  This code was released to Public domain.
 
-#ifndef batch_parser_parser2_h
-#define batch_parser_parser2_h
+#ifndef batch_parser_batch_parser_h
+#define batch_parser_batch_parser_h
+
 
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>

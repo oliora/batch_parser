@@ -1,5 +1,5 @@
-Notes
------
+Batch Parser Issues (TODO)
+--------------------------
 
 # DONE & at the end of line is skipped, &&, || or | at the end of line give an error.
   NOT CONFORM behavior: &&, || and | don't give an error at EOL.
@@ -85,9 +85,3 @@ Notes
   call :print 12 ^" 34   "    & echo 23
   =>
   nothing outputed
-
-Links
------
-
-Escaping: http://www.robvanderwoude.com/escapechars.php
-

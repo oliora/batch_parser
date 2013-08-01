@@ -1,12 +1,7 @@
-//
-//  main.cpp
-//  batch_parser
-//
-//  Created by Andrey Upadyshev on 14.07.13.
-//  Copyright (c) 2013 Andrey Upadyshev. All rights reserved.
-//
+//  Created by Andrey Upadyshev aka Oliora.
+//  This code was released to Public domain.
 
-#include "parser.h"
+#include "batch_parser.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
