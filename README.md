@@ -12,13 +12,13 @@ Prerequisites
 -------------
 
 - [CMake](http://www.cmake.org) version 2.8 or above
-- [Boost](http://www.boost.org) version 1.41 or above (Note that only 1.51 was tested)
+- [Boost](http://www.boost.org) version 1.41 or above (Note that only 1.51 was tested). **You need only headers!**
 - Your favourite dev tool (IDE or *make* or something) supporting at least C++03 (Note that only Visual Studio 2008 and Xcode 4.6 was tested)
 
 How to build
 ------------
 
-1. Setup Boost location with `set BOOST_ROOT=<root_of_boost>`
+1. Set *BOOST_ROOT* environment variable to the path of Boost root.
 
 2. Generate solution/project for your favourite dev tool:
 
