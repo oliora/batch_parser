@@ -102,6 +102,11 @@ namespace batch_parser
         {
             std::cout << ":" << label << std::endl;
         }
+
+        void printComment(const std::string& comment)
+        {
+            std::cout << "rem " << comment << std::endl;
+        }
                 
         typedef boost::spirit::ascii::space_type Skipper;
         
@@ -112,8 +117,8 @@ namespace batch_parser
         struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, Skipper>
         {
             // TODO: move atMarkCount into high level attibute
-            template<typename CommandAction, typename LabelAction>
-            BatchFileGrammar(size_t& atMarkCount, CommandAction cmdAction, LabelAction labelAction)
+            template<typename CommandAction, typename LabelAction, typename CommentAction>
+            BatchFileGrammar(size_t& atMarkCount, CommandAction onCmd, LabelAction onLabel, CommentAction onComment)
                 : BatchFileGrammar::base_type(batch)
             {
                 namespace qi = boost::spirit::qi;
@@ -131,6 +136,7 @@ namespace batch_parser
                 using namespace qi::labels;
                 using boost::spirit::attr;
                 using boost::spirit::eol;
+                using boost::spirit::eoi;
                 using boost::spirit::eps;
                 using boost::spirit::hold;
                 using boost::spirit::omit;
@@ -170,7 +176,7 @@ namespace batch_parser
                 
                 command %= skip(blank)
                 [
-                       !char_(':') // to do not capture labels
+                       !char_(':') // to do not capture explicit labels
                     >> +arg
                  ];
                 
@@ -178,18 +184,30 @@ namespace batch_parser
                 [
                        omit[   -(char_ - ':')
                             >> ':']
-                    >> lexeme[+(char_ - space)]
+                    >> lexeme[
+                              +(  (char_ - (space | '^'))
+                                | (omit['^'] >> (char_ - (space | eol)))
+                                | char_('^')
+                                )
+                        ]
                     >> omit[*(char_ - eol)]
+                 ];
+
+                comment %= skip(blank)
+                [
+                    "rem" >> lexeme[*(char_ - eol)]
                  ];
                 
                 at_mark = char_('@')        [ref(atMarkCount) += 1];
                 
                 group =
-                       char_('(')           [ref(bracketsLevel) += 1]
+                       *lexeme['^' >> eol]
+                    >> char_('(')           [ref(bracketsLevel) += 1]
                     >> *expression
-                    >> char_(')')           [ref(bracketsLevel) -= 1]
+                    >> (char_(')') | eoi)   [ref(bracketsLevel) -= 1]
+                    >> *lexeme['^' >> eol]
                     >> -(   eps(ref(bracketsLevel) == 0)
-                         >> omit[*char_(')')] // skip all extra closing brackets
+                         >> omit[*(char_(')') >> *lexeme['^' >> eol])] // skip all extra closing brackets
                          );
                 
                 operation =
@@ -203,8 +221,9 @@ namespace batch_parser
                 operand =
                        omit[*at_mark]
                     >> (  group
-                        | command           [cmdAction]
-                        | label             [labelAction] // TODO: Don't match label if it's not at the begin of line
+                        | comment           [onComment]
+                        | command           [onCmd]
+                        | label             [onLabel] // TODO: Don't match label if it's not at the begin of line
                         );
                 
                 expression =
@@ -221,7 +240,8 @@ namespace batch_parser
             long bracketsLevel; // TODO: move into attributes
             boost::spirit::qi::rule<Iterator, std::string()> arg;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> command; // It have to has blank_type skipper, but compilation fails in such case. Why?
-            boost::spirit::qi::rule<Iterator, std::string()> label; // It have to has blank_type skipper, but compilation fails in such case. Why?
+            boost::spirit::qi::rule<Iterator, std::string()> label;       // same
+            boost::spirit::qi::rule<Iterator, std::string()> comment;     // same
             boost::spirit::qi::rule<Iterator, Skipper> expression;
             boost::spirit::qi::rule<Iterator, Skipper> group;
             boost::spirit::qi::rule<Iterator, Skipper> operand;
@@ -240,7 +260,11 @@ namespace batch_parser
         namespace phoenix = boost::phoenix;
         
         size_t atMarkCount = 0;
-        detail::BatchFileGrammar<Iterator> grammar(atMarkCount, detail::printCmd, detail::printLabel);
+        detail::BatchFileGrammar<Iterator> grammar(
+            atMarkCount,
+            detail::printCmd,
+            detail::printLabel,
+            detail::printComment);
         
         
         bool r = phrase_parse(

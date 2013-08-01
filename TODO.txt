@@ -9,26 +9,25 @@ Batch Parser Issues (TODO)
 
 # DONE ) treated as matched closing bracket (if unclosed one exists) or as a normal character
 
+# DONE NOT CONFORM: EOF treated as closing of all unclosed brackets.
+  It gives ability to extract commands from very corrupted files.
+
 # DONE ^ escapes special chars |&<>() and @,
 
 # DONE before any other char skipped, so ^X => X, ^^ => ^, echo before space just skipped
 
 # DONE combine long lines by ^\n
 
-# TODO ^\n should be handled not only in command:
-  (^
-  (cmd)) is a valid case
-
-# DONE strange case with ^\n: \n just skipped, so ^ will act over next line char:
-  echo 12 ^
-  & echo 14
-  treated as 'echo 12 ^& echo 14'
+# DONE strange case with ^\n: \n skipped and ^ acts over next char:
+    echo 12 ^
+    & echo 14
+  treated as 'echo 12 ^& echo 14' (i.e. not 'echo 12 & echo 14')
 
 # DONE: ^ escapes special meaning of " until special handling
   of ^"...^" strings implemented (see below).
   Note it's NOT CONFORM behavior.
 
-# TODO parse labels. Label formats:
+# PARTIAL parse labels. Label formats:
   '[any_char](blank)*:(blank)*(label_name)(blank)...'
   - label_name is a char sequence till first blank including quotes etc:
     'name' => 'name'
@@ -36,19 +35,42 @@ Batch Parser Issues (TODO)
     '"long name"' => '"long'
     'spe^&ial' => 'spe&ial'
     '"spe^&ial"' => '"spe&ial'
-
   - rest of label string is ignored
   - spaces are allowed before and after ':'
   - any single char including @ and special chars is allowed at the 
     first char of label string (before spaces and ':')
+    NOT CONFORM: allowed
+        - any number of @
+        - any number of spaces before @
+        - any number of spaces before "char before ':'"
+        - both @ and "char before ':'"
   - label name should not be double quoted as normal arg. here, the double quote
     means just an ordinal char. note that 
-  - caret is allowed right before or inside the label_name.
-    it escaping the next char.
-    caret is not allowed in blanks before and after ':'.
-    
-    Fuck my brains case:
+  - caret is allowed right before or inside a label_name.
+    Single caret is just skipped, double caret is translated into single caret
+  - caret is allowed as last char of label_name. I can't determine what is label name in such case,
+    but it's neither 'name^' nor 'name'
+    NOT CONFORM: caret in last char of label_name is added to label_name (i.e. 'name^' produced).
+  - caret is not allowed in blanks before and after ':'.
+  - SKIP "Fuck my brain" case with any_char before label:
     'c:\windows' is a valid label which could be called with 'call :\windows'.
+    Now such expression checked to be a command first and then checked to be a label.
+    So such label detection could be wrong.
+  - TODO label can be only a first expression at line
+
+# DONE parse rem in format 'rem comment text till the EOL'
+
+# DONE '^\n' should be skipped before '(' and ')'. It's a valid case:
+    (   ^
+    (cmd)  ^
+    )
+
+# SKIP Strange case with caret and bracket.
+    (   ^
+    (cmd)  ^
+    )
+  Such code lead to error unless EOL, space or operator following the last closing bracket.
+  NOT CONFORM: we treat such code as OK (it's OK in fact)
 
 # TODO parse redirects (format?)
 
@@ -56,15 +78,13 @@ Batch Parser Issues (TODO)
 
 # TODO parse for and extract commands under it
 
-# TODO? ending spaces in quoted params which ends because of EOL/EOF should be cut:
-  'call "123 456   ' => %1 is '"123 456' (note ending spaces)
-  Could be solved by stripping out ending spaces for all params
+# TODO ending spaces in quoted params which ends because of EOL/EOF should be cut:
+  'call "123 456   ' => %1 is '"123 456' but we returns '"123 456   ' (note ending spaces)
+  Could be solved by stripping out ending spaces for all params.
 
-# TODO? parse echo specially (all the args into one command)
+# TODO parse echo specially (all the args into one command)
 
-#TODO? parse rem specially (all the args into one command)
-
-# TODO? ^" opens a strange type of quoted arg: 
+# TODO? ^" opens a strange type of quoted arg:
     - spaces allowed inside
     - arg should be closed with ^"
     - arg finished at first special char
