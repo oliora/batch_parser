@@ -12,8 +12,10 @@ Prerequisites
 -------------
 
 - [CMake](http://www.cmake.org) version 2.8 or above
-- [Boost](http://www.boost.org) version 1.41 or above (Note that only 1.51 was tested). **You need only headers!**
-- Your favourite dev tool (IDE or *make* or something) supporting at least C++03 (Note that only Visual Studio 2008 and Xcode 4.6 was tested)
+- [Boost](http://www.boost.org) version 1.41 or above (Note that only 1.51 was tested).
+  **You need only headers!**
+- Your favourite dev tool (IDE or *make* or something) supporting at least C++03
+  (Note that only *Visual Studio 2008* and *Xcode 4.6* was tested)
 
 How to build
 ------------
@@ -33,4 +35,5 @@ How to build
   
   *Note about `-G` option of CMake to choose dev tool to generate solution/project for.*
 
-3. Build generated solution/project either with you favourite compiler or with CMake `cmake --build . [--config Release|Debug]`.
+3. Build generated solution/project either with you favourite compiler or with CMake
+   `cmake --build . [--config Release|Debug]`.
