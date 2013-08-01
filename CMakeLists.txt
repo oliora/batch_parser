@@ -13,7 +13,7 @@ enable_testing()
 # Find Boost
 add_definitions(-DBOOST_ALL_NO_LIB) # Turn off Boost's auto-linking
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.51 REQUIRED COMPONENTS)
+find_package(Boost 1.41 REQUIRED COMPONENTS)
 
 # Find GTest + GMock
 #find_package(GMock 1.6)
