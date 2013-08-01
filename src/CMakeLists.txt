@@ -1,3 +1,6 @@
+# Created by Andrey Upadyshev aka Oliora.
+# This file was released to Public domain.
+
 set(SOURCES
     main.cpp
     batch_parser.h

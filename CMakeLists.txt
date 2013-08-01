@@ -1,3 +1,6 @@
+# Created by Andrey Upadyshev aka Oliora.
+# This file was released to Public domain.
+
 cmake_minimum_required(VERSION 2.8)
 
 project(batch_parser)
