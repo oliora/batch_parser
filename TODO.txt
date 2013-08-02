@@ -56,7 +56,9 @@ Batch Parser Issues (TODO)
     'c:\windows' is a valid label which could be called with 'call :\windows'.
     Now such expression checked to be a command first and then checked to be a label.
     So such label detection could be wrong.
-  - TODO label can be only a first expression at line
+  - TODO label can be the first (and the only) expression at its line
+    NOT CONFORM: label parsed as label even it found after another expression at line
+    (like '<expr> <operand> <label>')
 
 # DONE parse rem in format 'rem comment text till the EOL'
 
@@ -77,20 +79,72 @@ Batch Parser Issues (TODO)
     @* ((redirect_op arg) | arg)+
     Where <redirect_op> is '[0-9]?>', '[0-9]?>>', '[0-9]?<'.
 
-# SKIP strange redirect behavior
-    'echo foo >f bar' => f: 'foo '
+# SKIP strange redirect behavior in case it's inside a command and before the last command arg:
+    'echo foo >f bar' => f: 'foo ' (should be 'foo  bar')
     'echo foo >f bar wow' => f: 'foo  bar wow'
   NOT CONFORM: not implemented
 
-# SKIP redirect before label ('> outfile :label1')
-  NOT CONFORM: treated as command ':lable1'
+# DONE redirect before label ('> outfile :label1')
+  Expression skipped. Not 100% sure, but can't get any facts of opposide.
 
-# SKIP special handling of handle redirection ('[0-9]>&[0-9]' and '[0-9]<&[0-9]').
-  Now handled as ordinal redirection when '&' with following handle parsed as redirection argument.
+# SKIP restriction on argument of handle redirection ('[0-9]>&[0-9]' and '[0-9]<&[0-9]').
+  NOT CONFORM: later handle not checked to be a [0-9] but rather checked it's
+  a normal redirection argument.
+
+# TODO? strange redirect when caret is present:
+  FAIL (Prints 'foo > outfile'):
+    echo foo ^
+    > outfile
+  OK (any spaces before '>' are OK):
+    echo foo ^
+     > outfile
+  OK:
+    echo foo >^
+    outfile
+  Works as 'echo foo > " outfile"':
+    echo foo >^
+     outfile
+  FAIL (2 or more spaces before 'outfile' not OK):
+    echo foo >^
+      outfile
 
 # TODO group redirect
-    redirect_op arg (...)
-    (...) redirect_op arg
+    (redirect_op arg)* (
+    ...
+    ) (redirect_op arg)*
+  Caould be on a single line. Carets could be used.
+
+# TODO? strange group redirect when caret is present:
+  OK:  
+    (echo foo) >^
+    outfile
+  OK:  
+    (echo foo) >>^
+    outfile
+  OK:  
+    (echo foo) ^
+    > outfile
+  Works as '(echo foo) > " outfile"':
+    (echo foo) ^
+     > outfile
+  FAIL:
+    (echo foo) ^
+     > outfile
+  FAIL:  
+    (echo foo) ^
+    2> outfile
+  FAIL:
+    (echo foo) ^
+    >> outfile
+  FAIL:
+    (echo foo) >^
+    > outfile
+  Works as '(echo foo) > outfile' (not '>>'):
+    (echo foo) >^
+     > outfile
+  All types of pre redirection are OK:
+    > outfile ^
+    (echo foo)
 
 
 # TODO parse if and extract commands under it
@@ -101,8 +155,12 @@ Batch Parser Issues (TODO)
   'call "123 456   ' => %1 is '"123 456' but we returns '"123 456   ' (note ending spaces)
   Could be solved by stripping out ending spaces for all params.
 
-# TODO parse echo specially (all the args into one command)
+# SKIP parse echo specially (all the args into one command)
+  NOT CONFORM 
 
+# SKIP parse echo with redirects specially (keep spaces between args and redirect)
+  NOT CONFORM
+   
 # TODO? ^" opens a strange type of quoted arg:
     - spaces allowed inside
     - arg should be closed with ^"
