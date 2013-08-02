@@ -70,7 +70,7 @@ Batch Parser Issues (TODO)
     (cmd)  ^
     )
   Such code lead to error unless EOL, space or operator following the last closing bracket.
-  NOT CONFORM: we treat such code as OK (it's OK in fact)
+  NOT CONFORM: we treat such code as valid (And it's really valid!)
 
 # TODO parse redirects (format?)
 
