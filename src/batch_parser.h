@@ -133,6 +133,7 @@ namespace batch_parser
                 using ascii::string;
                 using ascii::blank;
                 using ascii::space;
+                using ascii::digit;
                 using namespace qi::labels;
                 using boost::spirit::attr;
                 using boost::spirit::eol;
@@ -146,7 +147,6 @@ namespace batch_parser
                 using boost::spirit::skip;
                 using phoenix::push_back;
                 using phoenix::ref;
-
 
                 arg %= lexeme[
                               +(
@@ -174,10 +174,16 @@ namespace batch_parser
                                 )
                               ];
                 
+                redirect = skip(blank)
+                [
+                       lexeme[-digit >> (lit('>') | ">>" | '<')]
+                    >> arg
+                 ];
+
                 command %= skip(blank)
                 [
                        !char_(':') // to do not capture explicit labels
-                    >> +arg
+                    >> +(omit[redirect] | arg)
                  ];
                 
                 label %= skip(blank)
@@ -239,6 +245,7 @@ namespace batch_parser
             
             long bracketsLevel; // TODO: move into attributes
             boost::spirit::qi::rule<Iterator, std::string()> arg;
+            boost::spirit::qi::rule<Iterator> redirect;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> command; // It have to has blank_type skipper, but compilation fails in such case. Why?
             boost::spirit::qi::rule<Iterator, std::string()> label;       // same
             boost::spirit::qi::rule<Iterator, std::string()> comment;     // same

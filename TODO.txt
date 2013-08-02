@@ -72,7 +72,7 @@ Batch Parser Issues (TODO)
   Such code lead to error unless EOL, space or operator following the last closing bracket.
   NOT CONFORM: we treat such code as valid (And it's really valid!)
 
-# TODO command redirect
+# DONE command redirect
     Command with redirect:
     @* ((redirect_op arg) | arg)+
     Where <redirect_op> is '[0-9]?>', '[0-9]?>>', '[0-9]?<'.
