@@ -155,6 +155,8 @@ namespace batch_parser
                                             | '|'
                                             | '\"'
                                             | '^'
+                                            | '>'
+                                            | '<'
                                             | (
                                                   eps(ref(bracketsLevel) != 0)
                                                >> ')' // catch extra closing brackets
@@ -176,20 +178,27 @@ namespace batch_parser
                 
                 redirect = skip(blank)
                 [
-                       lexeme[-digit >> (lit('>') | ">>" | '<')]
-                    >> arg
+                       lexeme[     -digit
+                                >> (  (lit('>') >> -lit('&'))
+                                    | (lit('<') >> -lit('&'))
+                                    | ">>"
+                                    )
+                              ]
+                    >> !char_(':') >> arg
                  ];
 
                 command %= skip(blank)
                 [
-                       !char_(':') // to do not capture explicit labels
-                    >> +(omit[redirect] | arg)
+                       *omit[redirect]
+                    >> (!char_(':') >> arg) // to do not capture explicit labels
+                    >> *(omit[redirect] | arg)
                  ];
-                
+
                 label %= skip(blank)
                 [
-                       omit[   -(char_ - ':')
-                            >> ':']
+                       omit[   -(+omit[redirect] | (char_ - ':'))
+                            >> ':'
+                            ]
                     >> lexeme[
                               +(  (char_ - (space | '^'))
                                 | (omit['^'] >> (char_ - (space | eol)))
@@ -230,6 +239,7 @@ namespace batch_parser
                         | comment           [onComment]
                         | command           [onCmd]
                         | label             [onLabel] // TODO: Don't match label if it's not at the begin of line
+                        | +(redirect|arg) // the rest mailformed shit
                         );
                 
                 expression =
