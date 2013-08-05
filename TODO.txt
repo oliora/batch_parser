@@ -196,17 +196,20 @@ Batch Parser Issues (TODO)
 
 # TODO parse for and extract commands under it
 
-# TODO ending spaces in quoted params which ends because of EOL/EOF should be cut:
+# TODO? strip ending spaces in quoted params which ends because of EOL/EOF:
   'call "123 456   ' => %1 is '"123 456' but we returns '"123 456   ' (note ending spaces)
   Could be solved by stripping out ending spaces for all params.
+  NOT CONFORM: not implemented
 
-# SKIP parse echo specially (all the args into one command)
-  NOT CONFORM 
+# TODO? Wipe out empty params (but not ""). Should be done after stripping ending spaces.
+  NOT CONFORM: not implemented
 
-# SKIP parse echo with redirects specially (keep spaces between args and redirect)
-  NOT CONFORM
-   
-# TODO? ^" opens a strange type of quoted arg:
+# TODO? parse echo specially 
+  1) Merge all args into one without stripping spaces between
+  2) Don't strip spaces between args and redirect(s)
+  NOT CONFORM: not implemented
+
+# SKIP ^" opens a strange type of quoted arg:
     - spaces allowed inside
     - arg should be closed with ^"
     - arg finished at first special char
@@ -227,3 +230,5 @@ Batch Parser Issues (TODO)
   call :print 12 ^" 34   "    & echo 23
   =>
   nothing outputed
+  
+  NOT CONFORM: not implemented
