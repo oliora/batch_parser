@@ -139,44 +139,58 @@ Batch Parser Issues (TODO)
     echo foo 1>^
     outfile
 
-# TODO group redirect
+# DONE group redirect
     (redirect_op arg)* (
     ...
     ) (redirect_op arg)*
   Could be on a single line. Carets could be used.
 
-# TODO strange group redirect when caret is present:
+# DONE strange group redirect when caret is present:
   OK:  
     (echo foo) >^
     outfile
+  
   OK:  
     (echo foo) >>^
     outfile
+  
   OK:  
     (echo foo) ^
     > outfile
+  
   Works as '(echo foo) > " outfile"':
     (echo foo) ^
      > outfile
+  
   FAIL:
     (echo foo) ^
      > outfile
+  NOT CONFORM: doesn't fail, prints 'foo'
+  
   FAIL:  
     (echo foo) ^
     2> outfile
+  NOT CONFORM: doesn't fail, prints 'foo'
+
   FAIL:
     (echo foo) ^
     >> outfile
+  NOT CONFORM: doesn't fail, prints 'foo'
+
   FAIL:
     (echo foo) >^
     > outfile
+  NOT CONFORM: doesn't fail, works as 
+    (echo foo)
+    outfile
+
   Works as '(echo foo) > outfile' (not '>>'):
     (echo foo) >^
      > outfile
+  
   All types of pre redirection are OK:
     > outfile ^
     (echo foo)
-
 
 # TODO parse if and extract commands under it
 

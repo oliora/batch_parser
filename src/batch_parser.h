@@ -179,9 +179,9 @@ namespace batch_parser
                 redirect = skip(blank)
                 [
                        lexeme[     -digit
-                                >> (  (lit('>') >> -lit('&'))
+                                >> (  ">>" 
+                                    | (lit('>') >> -lit('&'))
                                     | (lit('<') >> -lit('&'))
-                                    | ">>"
                                     )
                               ]
                     >> !char_(':') >> arg
@@ -216,13 +216,13 @@ namespace batch_parser
                 at_mark = char_('@')        [ref(atMarkCount) += 1];
                 
                 group =
-                       *lexeme['^' >> eol]
+                       *(redirect | lexeme['^' >> eol])
                     >> char_('(')           [ref(bracketsLevel) += 1]
                     >> *expression
                     >> (char_(')') | eoi)   [ref(bracketsLevel) -= 1]
-                    >> *lexeme['^' >> eol]
-                    >> -(   eps(ref(bracketsLevel) == 0)
-                         >> omit[*(char_(')') >> *lexeme['^' >> eol])] // skip all extra closing brackets
+                    >> *(  redirect 
+                         | lexeme['^' >> eol]
+                         | (eps(ref(bracketsLevel) == 0) >> omit[+char_(')')]) // skip all extra closing brackets
                          );
                 
                 operation =
