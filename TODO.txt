@@ -193,6 +193,24 @@ Batch Parser Issues (TODO)
     (echo foo)
 
 # TODO parse if and extract commands under it
+    IF [NOT] ERRORLEVEL number command
+    IF [NOT] string1==string2 command
+    IF [NOT] EXIST filename command    
+    IF [/I] [NOT] string1 compare-op string2 command
+        where compare-op is EQU, NEQ, LSS, LEQ, GTR or GEQ
+    IF [NOT] CMDEXTVERSION number command
+    IF [NOT] DEFINED variable command
+
+# TODO if with caret and group
+    if ERRORLEVEL 0 ^
+    (echo foo)
+  or
+    if ERRORLEVEL 0 ^
+     (echo foo)
+  or
+    if ERRORLEVEL 0 ^
+    ( echo foo)
+  FAIL because of unknown command ('(echo', ' ' or '(')
 
 # TODO parse for and extract commands under it
 
