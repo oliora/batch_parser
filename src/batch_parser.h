@@ -134,6 +134,7 @@ namespace batch_parser
                 using ascii::blank;
                 using ascii::space;
                 using ascii::digit;
+                using ascii::no_case;
                 using namespace qi::labels;
                 using boost::spirit::attr;
                 using boost::spirit::eol;
@@ -210,7 +211,7 @@ namespace batch_parser
 
                 comment %= skip(blank)
                 [
-                    "rem" >> lexeme[*(char_ - eol)]
+                    no_case["rem"] >> lexeme[*(char_ - eol)]
                  ];
                 
                 at_mark = char_('@')        [ref(atMarkCount) += 1];
