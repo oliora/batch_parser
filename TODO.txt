@@ -91,30 +91,61 @@ Batch Parser Issues (TODO)
   NOT CONFORM: later handle not checked to be a [0-9] but rather checked it's
   a normal redirection argument.
 
-# TODO? strange redirect when caret is present:
+# DONE strange redirect when caret is present:
   FAIL (Prints 'foo > outfile'):
     echo foo ^
     > outfile
+  
   OK (any spaces before '>' are OK):
     echo foo ^
      > outfile
+  NOT CONFORM: prints extra arg ' ' after 'foo'
+  
   OK:
     echo foo >^
     outfile
+  
   Works as 'echo foo > " outfile"':
     echo foo >^
      outfile
+  
   FAIL (2 or more spaces before 'outfile' not OK):
     echo foo >^
       outfile
+  NOT CONFORM: doesn't fail, prints 'foo outfile'
+
+  Works as 'echo foo > outfile'
+    echo foo >^
+     > outfile
+  
+  FAIL:
+    echo foo >^
+    > outfile
+  NOT CONFORM: doesn't fail, prints 'foo outfile'
+
+  Works as 'echo foo 1^>outfile':
+    echo foo 1^
+    >outfile
+
+  Works as 'echo foo 1 >outfile':
+    echo foo 1^
+     >outfile
+  
+  Works as 'echo foo 1 >outfile':  
+    echo foo ^
+    1>outfile
+  
+  OK:
+    echo foo 1>^
+    outfile
 
 # TODO group redirect
     (redirect_op arg)* (
     ...
     ) (redirect_op arg)*
-  Caould be on a single line. Carets could be used.
+  Could be on a single line. Carets could be used.
 
-# TODO? strange group redirect when caret is present:
+# TODO strange group redirect when caret is present:
   OK:  
     (echo foo) >^
     outfile
