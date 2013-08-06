@@ -228,7 +228,7 @@ Batch Parser Issues (TODO)
     if ERRORLEVEL 0 ^
     echo foo
 
-# TODO Crazy batch files: most commands and their arguments could be prefixed and/or suffixed with any amount of '=' which just skipped.
+# DONE Crazy batch files: most commands and their arguments could be prefixed and/or suffixed with any amount of '=' which just skipped.
     Most commands support this. Checked ones:
         if, goto, copy, del
     At least next commands don't support this:
@@ -236,6 +236,7 @@ Batch Parser Issues (TODO)
     
     Note that 'echo' command act in slightly different way. First '=' is treated as command name end and skipped. The second '='
     and rest '=' are echoed. (One more reason to parse 'echo' in its own way)
+    NOT CONFORM: extra '=' removed from all commands even 'set' and 'echo '
 
 # TODO: caret could be used in any command name (even in 'if', 'for' etc)
     ^<eol> should be implemented in lexr, not in parser. Don't forget to skip carets inside double quoted strings.

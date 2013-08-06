@@ -98,7 +98,7 @@ namespace batch_parser
             }
         }
                 
-        void printLabel(const std::string& label)
+        /*void printLabel(const std::string& label)
         {
             std::cout << ":" << label << std::endl;
         }
@@ -106,19 +106,36 @@ namespace batch_parser
         void printComment(const std::string& comment)
         {
             std::cout << "// " << comment << std::endl;
-        }
+        }*/
                 
         typedef boost::spirit::ascii::space_type Skipper;
         
         boost::phoenix::function<Appender> const append;
         boost::phoenix::function<DebugPrinter> const dbg;
+
+        struct BatchFileStatistic {
+            BatchFileStatistic()
+            : m_atMarks(0)
+            , m_ifCommands(0)
+            , m_forCommands(0)
+            , m_comments(0)
+            , m_labels(0)
+            {}
+
+            unsigned
+                  m_atMarks
+                , m_ifCommands
+                , m_forCommands
+                , m_comments
+                , m_labels;
+        };
         
         template <typename Iterator>
         struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, Skipper>
         {
             // TODO: move atMarkCount into high level attibute
-            template<typename CommandAction, typename LabelAction, typename CommentAction>
-            BatchFileGrammar(size_t& atMarkCount, CommandAction onCmd, LabelAction onLabel, CommentAction onComment)
+            template<typename CommandAction>
+            BatchFileGrammar(BatchFileStatistic& stat, CommandAction onCmd)
                 : BatchFileGrammar::base_type(batch)
             {
                 namespace qi = boost::spirit::qi;
@@ -174,31 +191,52 @@ namespace batch_parser
                             ] // I don't know why, but w/o raw[], the rule consumes some unprintable char on EOL/EOF
                       )
                  ];
-                
+
+                eqGarbage = omit[skip(blank)
+                [
+                    lit('=')
+                 ]];
+
+                at_mark = omit[skip(blank)
+                [
+                    lit('@')        [ref(stat.m_atMarks) += 1]
+                 ]];
+
+                argWithGarbage %= skip(blank)[*eqGarbage >> arg >> *eqGarbage];
+
                 redirect = skip(blank)
                 [
-                       lexeme[     -digit
+                       *eqGarbage
+                    >> lexeme[     -digit
                                 >> (  ">>" 
                                     | (lit('>') >> -lit('&'))
                                     | (lit('<') >> -lit('&'))
                                     )
                               ]
-                    >> !char_(':') >> arg
+                    >> *eqGarbage
+                    >> !char_(':') // to do not capture explicit labels
+                    >> argWithGarbage
                  ];
 
                 cmdCustom %= skip(blank)
                 [
                        *omit[redirect]
-                    >> (!char_(':') >> arg) // to do not capture explicit labels
-                    >> *(omit[redirect] | arg)
+                    >> (   *eqGarbage
+                        >> !char_(':') // to do not capture explicit labels
+                        >> argWithGarbage
+                        )
+                    >> *(omit[redirect] | argWithGarbage)
                  ];
 
                 cmdIf = skip(blank)
                 [
-                       no_case["IF"] 
+                       no_case["IF"]
+                    >> *eqGarbage
                     >> -no_case["/I"]
+                    >> *eqGarbage
                     >> -no_case["NOT"]
-                    >> (  (   
+                    >> *eqGarbage
+                    >> (  (
                               arg
                            >> no_case[lit("==") | "EQU" | "NEQ" | "LSS" | "LEQ" | "GTR" | "GEQ"]
                            >> arg
@@ -207,20 +245,25 @@ namespace batch_parser
                            >> arg // TODO: 'arg' has different format depending on previous keyword
                            ) 
                         )
-                    >> skip(blank)[operand]
+                    >> skip(space)[operand]
                     >> -(   no_case["ELSE"]
-                         >> skip(blank)[operand]
+                         >> skip(space)[operand]
                          )
                  ];
 
                 command = 
-                      cmdIf
-                    | cmdCustom[onCmd];
+                       *(at_mark| eqGarbage)
+                    >> (  cmdIf                 [ref(stat.m_ifCommands) += 1]
+                        | cmdCustom             [onCmd]
+                        )
+                    >> *eqGarbage;
 
                 label %= skip(blank)
                 [
                        omit[   -(+omit[redirect] | (char_ - ':'))
+                            >> *eqGarbage
                             >> ':'
+                            >> *eqGarbage
                             ]
                     >> lexeme[
                               +(  (char_ - (space | '^'))
@@ -233,17 +276,18 @@ namespace batch_parser
 
                 comment %= skip(blank)
                 [
-                    no_case["REM"] >> lexeme[*(char_ - eol)]
+                       *(at_mark| eqGarbage)
+                    >> no_case["REM"]
+                    >> lexeme[*(char_ - eol)]
                  ];
                 
-                at_mark = char_('@')        [ref(atMarkCount) += 1];
-                
                 group =
-                       *(redirect | lexeme['^' >> eol])
+                       *(at_mark| eqGarbage | redirect| lexeme['^' >> eol])
                     >> char_('(')           [ref(bracketsLevel) += 1]
                     >> *expression
                     >> (char_(')') | eoi)   [ref(bracketsLevel) -= 1]
-                    >> *(  redirect 
+                    >> *(  eqGarbage
+                         | redirect 
                          | lexeme['^' >> eol]
                          | (eps(ref(bracketsLevel) == 0) >> omit[+char_(')')]) // skip all extra closing brackets
                          );
@@ -251,13 +295,11 @@ namespace batch_parser
                 operation = (lit("&&") | "||" | '|' | '&');
 
                 operand =
-                       omit[*at_mark]
-                    >> (  group
-                        | comment           [onComment]
-                        | command
-                        | label             [onLabel] // TODO: Match but don't report label if it's not at the begin of line
-                        | +(redirect|arg) // the rest mailformed shit
-                        );
+                      group
+                    | comment           [ref(stat.m_comments) += 1]
+                    | command
+                    | label             [ref(stat.m_labels) += 1] // TODO: Match but don't report label if it's not at the begin of line
+                    | +(at_mark | eqGarbage | redirect); // the rest mailformed shit
 
                 expression =
                        operand
@@ -272,6 +314,9 @@ namespace batch_parser
             
             long bracketsLevel; // TODO: move into attributes
             boost::spirit::qi::rule<Iterator, std::string()> arg;
+            boost::spirit::qi::rule<Iterator, std::string()> argWithGarbage;
+            boost::spirit::qi::rule<Iterator> eqGarbage;
+            boost::spirit::qi::rule<Iterator> at_mark;
             boost::spirit::qi::rule<Iterator> redirect;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> cmdCustom;     // It have to has blank_type skipper, but compilation fails in such case. Why?
             boost::spirit::qi::rule<Iterator> cmdIf;                            // same problem
@@ -281,7 +326,6 @@ namespace batch_parser
             boost::spirit::qi::rule<Iterator, Skipper> expression;
             boost::spirit::qi::rule<Iterator, Skipper> group;
             boost::spirit::qi::rule<Iterator, Skipper> operand;
-            boost::spirit::qi::rule<Iterator, Skipper> at_mark;
             boost::spirit::qi::rule<Iterator, Skipper> operation;
             boost::spirit::qi::rule<Iterator, Skipper> batch;
         };
@@ -295,12 +339,10 @@ namespace batch_parser
         namespace ascii = boost::spirit::ascii;
         namespace phoenix = boost::phoenix;
         
-        size_t atMarkCount = 0;
+        detail::BatchFileStatistic stat;
         detail::BatchFileGrammar<Iterator> grammar(
-            atMarkCount,
-            detail::printCmd,
-            detail::printLabel,
-            detail::printComment);
+            stat,
+            detail::printCmd);
         
         
         bool r = phrase_parse(
@@ -310,9 +352,13 @@ namespace batch_parser
                               detail::Skipper()
                               );
 
-        std::cout << "@@@ " << atMarkCount << " @@@" << std::endl;
-
-        std::cout << (r ? "OK" : "FAIL") << std::endl;
+        std::cout
+            << "@: " << stat.m_atMarks << std::endl
+            << "IFs: " << stat.m_ifCommands << std::endl
+            << "FORs: " << stat.m_forCommands << std::endl
+            << "Labels: " << stat.m_labels << std::endl
+            << "Comments: " << stat.m_comments << std::endl
+            << (r ? "OK" : "FAIL") << std::endl;
         
         if (first != last)
         {
