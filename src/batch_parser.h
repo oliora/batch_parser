@@ -105,7 +105,7 @@ namespace batch_parser
 
         void printComment(const std::string& comment)
         {
-            std::cout << "rem " << comment << std::endl;
+            std::cout << "// " << comment << std::endl;
         }
                 
         typedef boost::spirit::ascii::space_type Skipper;
@@ -128,6 +128,7 @@ namespace batch_parser
                 using qi::lit;
                 using qi::lexeme;
                 using qi::on_error;
+                using qi::as_string;
                 using qi::fail;
                 using ascii::char_;
                 using ascii::string;
@@ -149,33 +150,30 @@ namespace batch_parser
                 using phoenix::push_back;
                 using phoenix::ref;
 
-                arg %= lexeme[
-                              +(
-                                   (char_ - (  space
-                                            | '&'
-                                            | '|'
-                                            | '\"'
-                                            | '^'
-                                            | '>'
-                                            | '<'
-                                            | (
-                                                  eps(ref(bracketsLevel) != 0)
-                                               >> ')' // catch extra closing brackets
-                                               )
-                                            )
-                                    )
-                                 | (   lit('^')
-                                    >> -(  (omit[eol] >> -((!eol >> char_) | (eol >> attr('\r') >> attr('\n'))))
-                                         | (char_ - blank)
-                                         )
-                                    )
-                                 | raw[(   char_('\"')
-                                        >> *(char_ - (char_('\"') | eol))
-                                        >> -(char_('\"'))
-                                        )
-                                       ] // I don't know why, but w/o raw[], the rule consumes some unprintable char on EOL/EOF
-                                )
-                              ];
+                arg %= lexeme
+                [
+                    +(  (  char_ 
+                         - (  space
+                            | '&' | '|' | '\"' | '^' | '>' | '<' | '='
+                            | (eps(ref(bracketsLevel) != 0) >> ')') // catch extra closing brackets
+                            )
+                         )
+                      | (   lit('^')
+                         >> -(  (   omit[eol] 
+                                 >> -(
+                                        (!eol >> char_)
+                                      | (eol >> attr('\r') >> attr('\n'))
+                                      )
+                                 )
+                              | (char_ - blank)
+                              )
+                         )
+                      | raw[   char_('\"')
+                            >> *(char_ - (char_('\"') | eol))
+                            >> -char_('\"')
+                            ] // I don't know why, but w/o raw[], the rule consumes some unprintable char on EOL/EOF
+                      )
+                 ];
                 
                 redirect = skip(blank)
                 [
@@ -188,12 +186,36 @@ namespace batch_parser
                     >> !char_(':') >> arg
                  ];
 
-                command %= skip(blank)
+                cmdCustom %= skip(blank)
                 [
                        *omit[redirect]
                     >> (!char_(':') >> arg) // to do not capture explicit labels
                     >> *(omit[redirect] | arg)
                  ];
+
+                cmdIf = skip(blank)
+                [
+                       no_case["IF"] 
+                    >> -no_case["/I"]
+                    >> -no_case["NOT"]
+                    >> (  (   
+                              arg
+                           >> no_case[lit("==") | "EQU" | "NEQ" | "LSS" | "LEQ" | "GTR" | "GEQ"]
+                           >> arg
+                           )
+                        | (   no_case[lit("ERRORLEVEL") | "EXIST" | "CMDEXTVERSION" | "DEFINED"]
+                           >> arg // TODO: 'arg' has different format depending on previous keyword
+                           ) 
+                        )
+                    >> skip(blank)[operand]
+                    >> -(   no_case["ELSE"]
+                         >> skip(blank)[operand]
+                         )
+                 ];
+
+                command = 
+                      cmdIf
+                    | cmdCustom[onCmd];
 
                 label %= skip(blank)
                 [
@@ -211,7 +233,7 @@ namespace batch_parser
 
                 comment %= skip(blank)
                 [
-                    no_case["rem"] >> lexeme[*(char_ - eol)]
+                    no_case["REM"] >> lexeme[*(char_ - eol)]
                  ];
                 
                 at_mark = char_('@')        [ref(atMarkCount) += 1];
@@ -226,23 +248,17 @@ namespace batch_parser
                          | (eps(ref(bracketsLevel) == 0) >> omit[+char_(')')]) // skip all extra closing brackets
                          );
                 
-                operation =
-                    ((  lit("&&")
-                      | "||"
-                      | '|'
-                      | '&'
-                      )
-                     );
+                operation = (lit("&&") | "||" | '|' | '&');
 
                 operand =
                        omit[*at_mark]
                     >> (  group
                         | comment           [onComment]
-                        | command           [onCmd]
-                        | label             [onLabel] // TODO: Don't match label if it's not at the begin of line
+                        | command
+                        | label             [onLabel] // TODO: Match but don't report label if it's not at the begin of line
                         | +(redirect|arg) // the rest mailformed shit
                         );
-                
+
                 expression =
                        operand
                     >> *(   operation
@@ -257,9 +273,11 @@ namespace batch_parser
             long bracketsLevel; // TODO: move into attributes
             boost::spirit::qi::rule<Iterator, std::string()> arg;
             boost::spirit::qi::rule<Iterator> redirect;
-            boost::spirit::qi::rule<Iterator, CommandWithArgs()> command; // It have to has blank_type skipper, but compilation fails in such case. Why?
-            boost::spirit::qi::rule<Iterator, std::string()> label;       // same
-            boost::spirit::qi::rule<Iterator, std::string()> comment;     // same
+            boost::spirit::qi::rule<Iterator, CommandWithArgs()> cmdCustom;     // It have to has blank_type skipper, but compilation fails in such case. Why?
+            boost::spirit::qi::rule<Iterator> cmdIf;                            // same problem
+            boost::spirit::qi::rule<Iterator> command;                          // same problem
+            boost::spirit::qi::rule<Iterator, std::string()> label;             // same problem
+            boost::spirit::qi::rule<Iterator, std::string()> comment;           // same problem
             boost::spirit::qi::rule<Iterator, Skipper> expression;
             boost::spirit::qi::rule<Iterator, Skipper> group;
             boost::spirit::qi::rule<Iterator, Skipper> operand;

@@ -192,16 +192,28 @@ Batch Parser Issues (TODO)
     > outfile ^
     (echo foo)
 
-# TODO parse if and extract commands under it
-    IF [NOT] ERRORLEVEL number command
-    IF [NOT] string1==string2 command
-    IF [NOT] EXIST filename command    
-    IF [/I] [NOT] string1 compare-op string2 command
-        where compare-op is EQU, NEQ, LSS, LEQ, GTR or GEQ
-    IF [NOT] CMDEXTVERSION number command
-    IF [NOT] DEFINED variable command
+# DONE parse if and extract commands under it
+    IF [/I] [NOT] string1 == string2 command
+    IF [/I] [NOT] string1 <compare_op> string2 command
+        where compare_op is EQU, NEQ, LSS, LEQ, GTR or GEQ
+    IF [/I] [NOT] ERRORLEVEL number command
+    IF [/I] [NOT] EXIST filename command    
+    IF [/I] [NOT] CMDEXTVERSION number command
+    IF [/I] [NOT] DEFINED variable command
 
-# TODO if with caret and group
+    Every if supports:
+    IF ... (
+        commands
+    ) ELSE (
+        commands
+    )
+
+# DONE working but not specified in IF command help:
+    if ERRORLEVEL == number command
+    if CMDEXTVERSION == number command
+
+# DONE if with caret and group
+  FAIL because of unknown command ('(echo', ' ' or '(')
     if ERRORLEVEL 0 ^
     (echo foo)
   or
@@ -210,7 +222,23 @@ Batch Parser Issues (TODO)
   or
     if ERRORLEVEL 0 ^
     ( echo foo)
-  FAIL because of unknown command ('(echo', ' ' or '(')
+  NOT CONFORM: doesn't fail, parsed as valid (ant it's really valid)
+   
+  OK:
+    if ERRORLEVEL 0 ^
+    echo foo
+
+# TODO Crazy batch files: most commands and their arguments could be prefixed and/or suffixed with any amount of '=' which just skipped.
+    Most commands support this. Checked ones:
+        if, goto, copy, del
+    At least next commands don't support this:
+        set
+    
+    Note that 'echo' command act in slightly different way. First '=' is treated as command name end and skipped. The second '='
+    and rest '=' are echoed. (One more reason to parse 'echo' in its own way)
+
+# TODO: caret could be used in any command name (even in 'if', 'for' etc)
+    ^<eol> should be implemented in lexr, not in parser. Don't forget to skip carets inside double quoted strings.
 
 # TODO parse for and extract commands under it
 
