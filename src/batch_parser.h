@@ -6,6 +6,7 @@
 
 
 #include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/lex_lexertl.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 #include <boost/spirit/include/phoenix_core.hpp>
@@ -113,6 +114,7 @@ namespace batch_parser
         boost::phoenix::function<Appender> const append;
         boost::phoenix::function<DebugPrinter> const dbg;
 
+
         struct BatchFileStatistic {
             BatchFileStatistic()
             : m_atMarks(0)
@@ -130,7 +132,7 @@ namespace batch_parser
                 , m_labels;
         };
         
-        template <typename Iterator>
+        /*template <typename Iterator>
         struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, Skipper>
         {
             // TODO: move atMarkCount into high level attibute
@@ -328,14 +330,78 @@ namespace batch_parser
             boost::spirit::qi::rule<Iterator, Skipper> operand;
             boost::spirit::qi::rule<Iterator, Skipper> operation;
             boost::spirit::qi::rule<Iterator, Skipper> batch;
-        };
+        };*/
         
+        namespace lex = boost::spirit::lex;
+
+        enum {
+            IDANY
+        };
+
+        template <typename Lexer>
+        struct BatchFileTokens : lex::lexer<Lexer>
+        {
+            BatchFileTokens()
+            {
+                this->self.add_pattern
+                    ("NORMAL_WORD", "[^\s&|\"^><=]+");
+                this->self.add_pattern
+                    ("QUOTED_WORD", "\"[^\"\r\n]*(\")?");
+                this->self.add_pattern
+                    ("ESCAPED_CHAR", "\^\S")
+                this->self.add_pattern
+                    ("ARG", "({NORMAL_WORD} |  | (\^$) | {QUOTED_WORD})+"
+                 
+                word = "{ARG}";
+
+                this->self.add
+                    (word)
+                    ('\n')
+                    (".", IDANY)
+                ;
+            }
+
+            lex::token_def<std::string> arg;
+        };
+
+        struct Printer
+        {
+            // the function operator gets called for each of the matched tokens
+            // c, l, w are references to the counters used to keep track of the numbers
+            template <typename Token>
+            bool operator()(Token const& t) const
+            {
+                switch (t.id())
+                {
+                case ID_WORD:
+                    break;
+                case ID_EOL:
+                    break;
+                case ID_CHAR:
+                    break;
+                }
+                return true;
+            }
+        };
     }
     
     template<typename Iterator>
     inline bool parse(Iterator first, Iterator last)
     {
-        namespace qi = boost::spirit::qi;
+        using namespace detail;
+
+        typedef lex::lexertl::token<char const*, lex::omit, boost::mpl::false_> Token;
+        typedef lex::lexertl::actor_lexer<Token> Lexer;
+
+        BatchFileTokens<Lexer> lexer;
+
+        char const* f = &*first;
+        char const* l = &*last;
+        bool r = lex::tokenize(f, l, tokenizer, Printer());
+
+        std::cout << (r ? "OK" : "FAIL") << std::endl;
+
+        /*namespace qi = boost::spirit::qi;
         namespace ascii = boost::spirit::ascii;
         namespace phoenix = boost::phoenix;
         
@@ -364,7 +430,7 @@ namespace batch_parser
         {
             std::cerr << "Can't parse the following: " << std::endl << std::string(first, last) << std::endl;
             return false;
-        }
+        }*/
         
         return true;
     }
