@@ -10,6 +10,10 @@ if(MSVC11)
     add_definitions(-D_VARIADIC_MAX=10)
 endif()
 
+if(MSVC)
+    add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+endif()
+
 # enable unit testing
 enable_testing()
 
