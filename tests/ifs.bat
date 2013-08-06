@@ -25,10 +25,10 @@ rem if NOT str cmp
 if NOT "mam ba" NEQ "mam ba" echo foo8
 
 rem if /I NOT str cmp. Note that "... not /I ..." is bad format
-if /I not "mam ba" NEQ "mam ba" echo foo9
+if /i not "MAM ba" NEQ "mam ba" echo foo9
 
 rem if /I NOT str cmp
-if /I "mam ba" equ "mam ba" echo foo10
+if /I "mam BA" equ "mam ba" echo foo10
 
 rem if CMDEXTVERSION
 if CMDEXTVERSION 1 echo foo11
@@ -41,6 +41,12 @@ if DEFINED PATH echo foo13
 
 rem if NOT DEFINED
 if not defined mamba_italiana echo foo14
+
+rem if ERRORLEVEL ==
+if ERRORLEVEL == 0 echo foo15
+
+rem if CMDEXTVERSION ==
+if CMDEXTVERSION == 0 echo foo16
 
 rem if else
 if NOT foo==bar (echo foo90) else (echo bar90)
