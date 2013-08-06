@@ -243,6 +243,9 @@ Batch Parser Issues (TODO)
 
 # TODO parse for and extract commands under it
 
+# TODO fix too high counters (they are incremented on partial match during matching wrong alternative)
+  Counter related matches should be moved out from alternatives: (a >> b) | (a >> c) => a >> (b|c).
+
 # TODO? strip ending spaces in quoted params which ends because of EOL/EOF:
   'call "123 456   ' => %1 is '"123 456' but we returns '"123 456   ' (note ending spaces)
   Could be solved by stripping out ending spaces for all params.
