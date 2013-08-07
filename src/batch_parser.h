@@ -185,10 +185,10 @@ namespace batch_parser
                               | (char_ - blank)
                               )
                          )
-                      | raw[   char_('\"')
-                            >> *(char_ - (char_('\"') | eol))
-                            >> -char_('\"')
-                            ] // I don't know why, but w/o raw[], the rule consumes some unprintable char on EOL/EOF
+                      | (   char_('\"')
+                         >> *(char_ - char_('\"') - eol)
+                         >> -char_('\"')
+                         )
                       )
                  ];
 
