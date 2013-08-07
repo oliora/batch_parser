@@ -251,8 +251,11 @@ Batch Parser Issues (TODO)
     FOR /F ["options"] %variable IN (`command`) DO command
         where "options" is something like "eol=; tokens=2,3* delims=, "
     
-    Note "options" can't include '"' (same as normal argument).
-    '(' and ')' can be used inside (set) when placed into double quotes.
+  Note "options" can't include '"' (same as normal argument).
+  '(' and ')' can be used inside (set) when placed into double quotes.
+    
+  NOT CONFORM: no restriction for option (/D,R,L...) letter. No restriction for 
+  options, path for /R option and "condition" (expression inside brackets).
 
 # TODO fix too high counters (they are incremented on partial match during matching wrong alternative)
   Counter related matches should be moved out from alternatives: (a >> b) | (a >> c) => a >> (b|c).
