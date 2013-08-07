@@ -194,12 +194,12 @@ namespace batch_parser
 
                 eqGarbage = omit[skip(blank)
                 [
-                    lit('=')
+                    +lit('=')
                  ]];
 
                 at_mark = omit[skip(blank)
                 [
-                    lit('@')        [ref(stat.m_atMarks) += 1]
+                    +(lit('@')                  [ref(stat.m_atMarks) += 1])
                  ]];
 
                 argWithGarbage %= skip(blank)[*eqGarbage >> arg >> *eqGarbage];
@@ -305,9 +305,9 @@ namespace batch_parser
                 
                 group =
                        *(at_mark| eqGarbage | redirect| lexeme['^' >> eol])
-                    >> char_('(')           [ref(bracketsLevel) += 1]
+                    >> char_('(')               [ref(bracketsLevel) += 1]
                     >> *expression
-                    >> (char_(')') | eoi)   [ref(bracketsLevel) -= 1]
+                    >> (char_(')') | eoi)       [ref(bracketsLevel) -= 1]
                     >> *(  eqGarbage
                          | redirect 
                          | lexeme['^' >> eol]
@@ -318,9 +318,9 @@ namespace batch_parser
 
                 operand =
                       group
-                    | comment           [ref(stat.m_comments) += 1]
+                    | comment                   [ref(stat.m_comments) += 1]
                     | command
-                    | label             [ref(stat.m_labels) += 1] // TODO: Match but don't report label if it's not at the begin of line
+                    | label                     [ref(stat.m_labels) += 1] // TODO: Match but don't report label if it's not at the begin of line
                     | +(at_mark | eqGarbage | redirect); // the rest mailformed shit
 
                 expression =
@@ -330,7 +330,7 @@ namespace batch_parser
                          );
                 
                 batch =
-                       eps                  [ref(bracketsLevel) = 0]
+                       eps                      [ref(bracketsLevel) = 0]
                     >> *(expression);
             }
             
