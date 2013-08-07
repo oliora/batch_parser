@@ -177,10 +177,9 @@ namespace batch_parser
                             )
                          )
                       | (   lit('^')
-                         >> -(  (   omit[eol] 
-                                 >> -(
-                                        (!eol >> char_)
-                                      | (eol >> attr('\r') >> attr('\n'))
+                         >> -(  (   omit[eol]
+                                 >> -(  (omit[eol] >> attr('\n'))
+                                      | (char_ - blank)
                                       )
                                  )
                               | (char_ - blank)
