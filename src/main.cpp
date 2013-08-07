@@ -22,10 +22,13 @@ namespace
         is.seekg(0, std::ios_base::end);
         
         Buffer res(is.tellg());
-        
-        is.seekg(0, std::ios_base::beg);
-        const size_t realSize = is.rdbuf()->sgetn(&res.front(), res.size()*2);
-        res.resize(realSize);
+
+        if (res.size())
+        {
+            is.seekg(0, std::ios_base::beg);
+            const size_t realSize = is.rdbuf()->sgetn(&res.front(), res.size());
+            res.resize(realSize);
+        }
         
         return res;
     }
@@ -47,12 +50,13 @@ int main(int argc, const char * argv[])
         
         //std::cout.write(&buf.front(), buf.size());
     
-        batch_parser::parse(buf.begin(), buf.end());
+        const bool res = batch_parser::parse(buf.begin(), buf.end());
+        return res ? 0 : 1;
     }
     catch (const std::exception& ex)
     {
         std::cout << "Error: " << ex.what() << std::endl;
-        return 1;
+        return 2;
     }
     
     return 0;
