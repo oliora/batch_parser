@@ -265,8 +265,11 @@ namespace batch_parser
                     >> no_case["IN"]
                     >> *eqGarbage
                     >> lit('(')                 [ref(bracketsLevel) += 1]
-                    >> *argWithGarbage
-                    >> lit(')')                 [ref(bracketsLevel) -= 1]
+                    >> skip(space)
+                       [
+                           *argWithGarbage
+                        >> lit(')')             [ref(bracketsLevel) -= 1]
+                        ]
                     >> *eqGarbage
                     >> no_case["DO"]
                     >> skip(space)[operand]
