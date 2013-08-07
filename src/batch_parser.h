@@ -151,6 +151,7 @@ namespace batch_parser
                 using ascii::string;
                 using ascii::blank;
                 using ascii::space;
+                using ascii::alpha;
                 using ascii::digit;
                 using ascii::no_case;
                 using namespace qi::labels;
@@ -232,7 +233,7 @@ namespace batch_parser
                 [
                        no_case["IF"]
                     >> *eqGarbage
-                    >> -no_case["/I"]
+                    >> -lexeme[char_('/') >> alpha]
                     >> *eqGarbage
                     >> -no_case["NOT"]
                     >> *eqGarbage
@@ -251,9 +252,31 @@ namespace batch_parser
                          )
                  ];
 
+                cmdFor = skip(blank)
+                [
+                       no_case["FOR"]
+                    >> *eqGarbage
+                    >> -lexeme[lit('/') >> alpha]
+                    >> *eqGarbage
+                    >> -(!lit('%') >> argWithGarbage)
+                    /*>> -(drive)*/
+                    /*>> -(options)*/
+                    >> lexeme[lit("%%") >> alpha]
+                    >> *eqGarbage
+                    >> no_case["IN"]
+                    >> *eqGarbage
+                    >> lit('(')                 [ref(bracketsLevel) += 1]
+                    >> *argWithGarbage
+                    >> lit(')')                 [ref(bracketsLevel) -= 1]
+                    >> *eqGarbage
+                    >> no_case["DO"]
+                    >> skip(space)[operand]
+                 ];
+
                 command = 
                        *(at_mark| eqGarbage)
                     >> (  cmdIf                 [ref(stat.m_ifCommands) += 1]
+                        | cmdFor                [ref(stat.m_forCommands) += 1]
                         | cmdCustom             [onCmd]
                         )
                     >> *eqGarbage;
@@ -320,6 +343,7 @@ namespace batch_parser
             boost::spirit::qi::rule<Iterator> redirect;
             boost::spirit::qi::rule<Iterator, CommandWithArgs()> cmdCustom;     // It have to has blank_type skipper, but compilation fails in such case. Why?
             boost::spirit::qi::rule<Iterator> cmdIf;                            // same problem
+            boost::spirit::qi::rule<Iterator> cmdFor;                           // same problem
             boost::spirit::qi::rule<Iterator> command;                          // same problem
             boost::spirit::qi::rule<Iterator, std::string()> label;             // same problem
             boost::spirit::qi::rule<Iterator, std::string()> comment;           // same problem

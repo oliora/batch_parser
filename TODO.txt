@@ -192,7 +192,7 @@ Batch Parser Issues (TODO)
     > outfile ^
     (echo foo)
 
-# DONE parse if and extract commands under it
+# DONE parse IF command and extract commands under it
     IF [/I] [NOT] string1 == string2 command
     IF [/I] [NOT] string1 <compare_op> string2 command
         where compare_op is EQU, NEQ, LSS, LEQ, GTR or GEQ
@@ -212,7 +212,7 @@ Batch Parser Issues (TODO)
     if ERRORLEVEL == number command
     if CMDEXTVERSION == number command
 
-# DONE if with caret and group
+# DONE IF command with caret and group
   FAIL because of unknown command ('(echo', ' ' or '(')
     if ERRORLEVEL 0 ^
     (echo foo)
@@ -238,13 +238,30 @@ Batch Parser Issues (TODO)
     and rest '=' are echoed. (One more reason to parse 'echo' in its own way)
     NOT CONFORM: extra '=' removed from all commands even 'set' and 'echo '
 
-# TODO: caret could be used in any command name (even in 'if', 'for' etc)
-    ^<eol> should be implemented in lexr, not in parser. Don't forget to skip carets inside double quoted strings.
-
-# TODO parse for and extract commands under it
+# DONE parse FOR command and extract commands under it
+    FOR %variable IN (set) DO command
+    FOR /D %variable IN (set) DO command
+    FOR /R [[drive:]path] %variable IN (set) DO command
+    FOR /L %variable IN (start,step,end) DO command
+    FOR /F ["options"] %variable IN (file-set) DO command
+    FOR /F ["options"] %variable IN ("string") DO command
+    FOR /F ["options"] %variable IN ('command') DO command
+    FOR /F ["options"] %variable IN (file-set) DO command
+    FOR /F ["options"] %variable IN ('string') DO command
+    FOR /F ["options"] %variable IN (`command`) DO command
+        where "options" is something like "eol=; tokens=2,3* delims=, "
+    
+    Note "options" can't include '"' (same as normal argument).
+    '(' and ')' can be used inside (set) when placed into double quotes.
 
 # TODO fix too high counters (they are incremented on partial match during matching wrong alternative)
   Counter related matches should be moved out from alternatives: (a >> b) | (a >> c) => a >> (b|c).
+
+# TODO: caret could be used in any command name or its argument (even in 'if', 'for' etc)
+    ^<eol> should be implemented in lexr, not in parser. Don't forget to leave carets inside double quoted strings untouched.
+
+# SKIP extract command from FOR command's "condition", i.e. FOR ... ('command') and FOR ... (`command`)
+  Would not implement because case is rare so has no effect in overal file analyze.
 
 # TODO? strip ending spaces in quoted params which ends because of EOL/EOF:
   'call "123 456   ' => %1 is '"123 456' but we returns '"123 456   ' (note ending spaces)
