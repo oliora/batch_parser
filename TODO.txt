@@ -27,7 +27,7 @@ Batch Parser Issues (TODO)
   of ^"...^" strings implemented (see below).
   Note it's NOT CONFORM behavior.
 
-# PARTIAL parse labels. Label formats:
+# DONE parse labels. Label formats:
   '[any_char](blank)*:(blank)*(label_name)(blank)...'
   - label_name is a char sequence till first blank including quotes etc:
     'name' => 'name'
@@ -52,13 +52,11 @@ Batch Parser Issues (TODO)
     but it's neither 'name^' nor 'name'
     NOT CONFORM: caret in last char of label_name is added to label_name (i.e. 'name^' produced).
   - caret is not allowed in blanks before and after ':'.
-  - SKIP "Fuck my brain" case with any_char before label:
-    'c:\windows' is a valid label which could be called with 'call :\windows'.
-    Now such expression checked to be a command first and then checked to be a label.
-    So such label detection could be wrong.
-  - TODO label can be the first (and the only) expression at its line
-    NOT CONFORM: label parsed as label even it found after another expression at line
-    (like '<expr> <operand> <label>')
+
+# SKIP "Fuck my brain" case with any_char before label:
+  'c:\windows' is a valid label which could be called with 'call :\windows'.
+  Now such expression checked to be a command first and then checked to be a label.
+  So such label detection could be wrong.
 
 # DONE parse rem in format 'rem comment text till the EOL'
 
@@ -257,14 +255,18 @@ Batch Parser Issues (TODO)
   NOT CONFORM: no restriction for option (/D,R,L...) letter. No restriction for 
   options, path for /R option and "condition" (expression inside brackets).
 
+# SKIP extract command from FOR command's "condition", i.e. FOR ... ('command') and FOR ... (`command`)
+  Would not implement because case is rare so has no effect in overal file analyze.
+
 # TODO fix too high counters (they are incremented on partial match during matching wrong alternative)
   Counter related matches should be moved out from alternatives: (a >> b) | (a >> c) => a >> (b|c).
 
 # TODO: caret could be used in any command name or its argument (even in 'if', 'for' etc)
     ^<eol> should be implemented in lexr, not in parser. Don't forget to leave carets inside double quoted strings untouched.
 
-# SKIP extract command from FOR command's "condition", i.e. FOR ... ('command') and FOR ... (`command`)
-  Would not implement because case is rare so has no effect in overal file analyze.
+# TODO label can be the first (and the only) expression at its line
+    NOT CONFORM: label parsed as label even it found after another expression at line
+    (like '<expr> <operand> <label>')
 
 # TODO? strip ending spaces in quoted params which ends because of EOL/EOF:
   'call "123 456   ' => %1 is '"123 456' but we returns '"123 456   ' (note ending spaces)
