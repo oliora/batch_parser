@@ -22,368 +22,267 @@
 
 namespace batch_parser
 {
-    namespace detail
+    // Command and its arguments
+    typedef std::vector<std::string> Command;
+
+    struct Statistic {
+        Statistic()
+        : m_atMarks(0)
+        , m_ifCommands(0)
+        , m_forCommands(0)
+        , m_comments(0)
+        , m_labels(0)
+        , m_redirects(0)
+        {}
+
+        unsigned
+              m_atMarks
+            , m_ifCommands
+            , m_forCommands
+            , m_comments
+            , m_labels
+            , m_redirects;
+    };
+
+    namespace ns = boost::spirit::standard;
+        
+    template <typename Iterator>
+    struct Grammar : boost::spirit::qi::grammar<Iterator, ns::space_type>
     {
-        // TODO: CommandWithArgs must be a shared_ptr<std::vector<std::string> >
-        // to reduce copy
-        typedef std::vector<std::string> CommandWithArgs;
-        //typedef std::vector<CommandWithArgs> CommandsList;
-        
-        
-        struct Appender
+        // TODO: move atMarkCount into high level attibute
+        template<typename CommandAction>
+        Grammar(Statistic& stat, CommandAction onCmd)
+            : Grammar::base_type(batch)
         {
-            template <typename C, typename Arg>
-            struct result
-            {
-                typedef void type;
-            };
+            namespace qi = boost::spirit::qi;
+            namespace phoenix = boost::phoenix;
+            using namespace qi::labels;
+
+            using qi::lit;
+            using qi::lexeme;
+            using qi::on_error;
+            using qi::as_string;
+            using qi::fail;
             
-            template <typename C, typename Arg>
-            void operator()(C& c, Arg const& data) const
-            {
-                c.insert(c.end(), data.begin(), data.end());
-            }
-        };
-        
-        struct DebugPrinter
-        {
-            template <typename C>
-            struct result
-            {
-                typedef void type;
-            };
-
-            template <typename C>
-            void operator()(C arg) const
-            {
-                std::cout << arg << std::endl;
-            }
-        };
-        
-        /*void printComandsList(const CommandsList& cmds)
-        {
-            BOOST_FOREACH(const CommandWithArgs& cmd, cmds)
-            {
-                if (cmd.empty())
-                {
-                    std::cout << std::endl;
-                    continue;
-                }
-                
-                CommandWithArgs::const_iterator first = cmd.begin();
-                std::cout << *first << ":" << std::endl;
-                ++first;
-                
-                for(;first != cmd.end(); ++first)
-                {
-                    std::cout << "  " << *first << "," << std::endl;
-                }
-            }
-        }*/
-                
-        void printCmd(const CommandWithArgs& cmd)
-        {
-            if (cmd.empty())
-            {
-                return;
-            }
-                
-            CommandWithArgs::const_iterator first = cmd.begin();
-            std::cout << *first << ":" << std::endl;
-            ++first;
+            using ns::char_;
+            using ns::blank;
+            using ns::space;
+            using ns::alpha;
+            using ns::digit;
+            using ns::no_case;
             
-            for(;first != cmd.end(); ++first)
-            {
-                std::cout << "  " << *first << "," << std::endl;
-            }
-        }
-                
-        /*void printLabel(const std::string& label)
-        {
-            std::cout << ":" << label << std::endl;
-        }
+            using boost::spirit::attr;
+            using boost::spirit::eol;
+            using boost::spirit::eoi;
+            using boost::spirit::eps;
+            using boost::spirit::hold;
+            using boost::spirit::omit;
+            using boost::spirit::raw;
+            using boost::spirit::hold;
+            using boost::spirit::no_skip;
+            using boost::spirit::skip;
+            using phoenix::ref;
 
-        void printComment(const std::string& comment)
-        {
-            std::cout << "// " << comment << std::endl;
-        }*/
-                
-        typedef boost::spirit::ascii::space_type Skipper;
-        
-        boost::phoenix::function<Appender> const append;
-        boost::phoenix::function<DebugPrinter> const dbg;
+            arg %= lexeme
+            [
+                +(  (  char_ 
+                     - (  space
+                        | '&' | '|' | '\"' | '^' | '>' | '<' | '='
+                        | (eps(ref(bracketsLevel) != 0) >> ')') // catch extra closing brackets
+                        )
+                     )
+                  | (   lit('^')
+                     >> -(  (   omit[eol]
+                             >> -(  (omit[eol] >> attr('\n'))
+                                  | (char_ - blank)
+                                  )
+                             )
+                          | (char_ - blank)
+                          )
+                     )
+                  | (   char_('\"')
+                     >> *(char_ - char_('\"') - eol)
+                     >> -char_('\"')
+                     )
+                  )
+             ];
 
-        struct BatchFileStatistic {
-            BatchFileStatistic()
-            : m_atMarks(0)
-            , m_ifCommands(0)
-            , m_forCommands(0)
-            , m_comments(0)
-            , m_labels(0)
-            {}
+            eqGarbage = omit[skip(blank)
+            [
+                +lit('=')
+             ]];
 
-            unsigned
-                  m_atMarks
-                , m_ifCommands
-                , m_forCommands
-                , m_comments
-                , m_labels;
-        };
-        
-        template <typename Iterator>
-        struct BatchFileGrammar : boost::spirit::qi::grammar<Iterator, Skipper>
-        {
-            // TODO: move atMarkCount into high level attibute
-            template<typename CommandAction>
-            BatchFileGrammar(BatchFileStatistic& stat, CommandAction onCmd)
-                : BatchFileGrammar::base_type(batch)
-            {
-                namespace qi = boost::spirit::qi;
-                namespace ascii = boost::spirit::ascii;
-                namespace phoenix = boost::phoenix;
-                
-                using qi::lit;
-                using qi::lexeme;
-                using qi::on_error;
-                using qi::as_string;
-                using qi::fail;
-                using ascii::char_;
-                using ascii::string;
-                using ascii::blank;
-                using ascii::space;
-                using ascii::alpha;
-                using ascii::digit;
-                using ascii::no_case;
-                using namespace qi::labels;
-                using boost::spirit::attr;
-                using boost::spirit::eol;
-                using boost::spirit::eoi;
-                using boost::spirit::eps;
-                using boost::spirit::hold;
-                using boost::spirit::omit;
-                using boost::spirit::raw;
-                using boost::spirit::hold;
-                using boost::spirit::no_skip;
-                using boost::spirit::skip;
-                using phoenix::push_back;
-                using phoenix::ref;
+            at_mark = omit[skip(blank)
+            [
+                +(lit('@')                  [ref(stat.m_atMarks) += 1])
+             ]];
 
-                arg %= lexeme
-                [
-                    +(  (  char_ 
-                         - (  space
-                            | '&' | '|' | '\"' | '^' | '>' | '<' | '='
-                            | (eps(ref(bracketsLevel) != 0) >> ')') // catch extra closing brackets
-                            )
-                         )
-                      | (   lit('^')
-                         >> -(  (   omit[eol]
-                                 >> -(  (omit[eol] >> attr('\n'))
-                                      | (char_ - blank)
-                                      )
-                                 )
-                              | (char_ - blank)
-                              )
-                         )
-                      | (   char_('\"')
-                         >> *(char_ - char_('\"') - eol)
-                         >> -char_('\"')
-                         )
-                      )
-                 ];
+            argWithGarbage %= skip(blank)[*eqGarbage >> arg >> *eqGarbage];
 
-                eqGarbage = omit[skip(blank)
-                [
-                    +lit('=')
-                 ]];
+            redirect = skip(blank)
+            [(
+                   *eqGarbage
+                >> lexeme[     -digit
+                            >> (  ">>" 
+                                | (lit('>') >> -lit('&'))
+                                | (lit('<') >> -lit('&'))
+                                )
+                          ]
+                >> *eqGarbage
+                >> !char_(':') // to do not capture explicit labels
+                >> argWithGarbage
+             )                              
+            ][ref(stat.m_redirects) += 1];
 
-                at_mark = omit[skip(blank)
-                [
-                    +(lit('@')                  [ref(stat.m_atMarks) += 1])
-                 ]];
-
-                argWithGarbage %= skip(blank)[*eqGarbage >> arg >> *eqGarbage];
-
-                redirect = skip(blank)
-                [
-                       *eqGarbage
-                    >> lexeme[     -digit
-                                >> (  ">>" 
-                                    | (lit('>') >> -lit('&'))
-                                    | (lit('<') >> -lit('&'))
-                                    )
-                              ]
-                    >> *eqGarbage
+            cmdCustom %= skip(blank)
+            [
+                   *omit[redirect]
+                >> (   *eqGarbage
                     >> !char_(':') // to do not capture explicit labels
                     >> argWithGarbage
-                 ];
+                    )
+                >> *(omit[redirect] | argWithGarbage)
+             ];
 
-                cmdCustom %= skip(blank)
-                [
-                       *omit[redirect]
-                    >> (   *eqGarbage
-                        >> !char_(':') // to do not capture explicit labels
-                        >> argWithGarbage
-                        )
-                    >> *(omit[redirect] | argWithGarbage)
-                 ];
+            cmdIf = skip(blank)
+            [
+                   no_case["IF"]
+                >> *eqGarbage
+                >> -lexeme[char_('/') >> alpha]
+                >> *eqGarbage
+                >> -no_case["NOT"]
+                >> *eqGarbage
+                >> (  (
+                          arg
+                       >> no_case[lit("==") | "EQU" | "NEQ" | "LSS" | "LEQ" | "GTR" | "GEQ"]
+                       >> arg
+                       )
+                    | (   no_case[lit("ERRORLEVEL") | "EXIST" | "CMDEXTVERSION" | "DEFINED"]
+                       >> arg // TODO: 'arg' has different format depending on previous keyword
+                       ) 
+                    )
+                >> skip(space)[operand]
+                >> -(   no_case["ELSE"]
+                     >> skip(space)[operand]
+                     )
+             ];
 
-                cmdIf = skip(blank)
-                [
-                       no_case["IF"]
-                    >> *eqGarbage
-                    >> -lexeme[char_('/') >> alpha]
-                    >> *eqGarbage
-                    >> -no_case["NOT"]
-                    >> *eqGarbage
-                    >> (  (
-                              arg
-                           >> no_case[lit("==") | "EQU" | "NEQ" | "LSS" | "LEQ" | "GTR" | "GEQ"]
-                           >> arg
-                           )
-                        | (   no_case[lit("ERRORLEVEL") | "EXIST" | "CMDEXTVERSION" | "DEFINED"]
-                           >> arg // TODO: 'arg' has different format depending on previous keyword
-                           ) 
-                        )
-                    >> skip(space)[operand]
-                    >> -(   no_case["ELSE"]
-                         >> skip(space)[operand]
-                         )
-                 ];
+            cmdFor = skip(blank)
+            [
+                   no_case["FOR"]
+                >> *eqGarbage
+                >> -lexeme[lit('/') >> alpha]
+                >> *eqGarbage
+                >> -(!lit('%') >> argWithGarbage)
+                /*>> -(drive)*/
+                /*>> -(options)*/
+                >> lexeme[lit("%%") >> alpha]
+                >> *eqGarbage
+                >> no_case["IN"]
+                >> *eqGarbage
+                >> lit('(')                 [ref(bracketsLevel) += 1]
+                >> skip(space)
+                   [
+                       *argWithGarbage
+                    >> lit(')')             [ref(bracketsLevel) -= 1]
+                    ]
+                >> *eqGarbage
+                >> no_case["DO"]
+                >> skip(space)[operand]
+             ];
 
-                cmdFor = skip(blank)
-                [
-                       no_case["FOR"]
-                    >> *eqGarbage
-                    >> -lexeme[lit('/') >> alpha]
-                    >> *eqGarbage
-                    >> -(!lit('%') >> argWithGarbage)
-                    /*>> -(drive)*/
-                    /*>> -(options)*/
-                    >> lexeme[lit("%%") >> alpha]
-                    >> *eqGarbage
-                    >> no_case["IN"]
-                    >> *eqGarbage
-                    >> lit('(')                 [ref(bracketsLevel) += 1]
-                    >> skip(space)
-                       [
-                           *argWithGarbage
-                        >> lit(')')             [ref(bracketsLevel) -= 1]
+            command = 
+                   *(at_mark| eqGarbage)
+                >> (  cmdIf                 [ref(stat.m_ifCommands) += 1]
+                    | cmdFor                [ref(stat.m_forCommands) += 1]
+                    | cmdCustom             [onCmd]
+                    )
+                >> *eqGarbage;
+
+            label %= skip(blank)
+            [
+                   omit[   -(+omit[redirect] | (char_ - ':'))
+                        >> *eqGarbage
+                        >> ':'
+                        >> *eqGarbage
                         ]
-                    >> *eqGarbage
-                    >> no_case["DO"]
-                    >> skip(space)[operand]
-                 ];
+                >> lexeme[
+                          +(  (char_ - (space | '^'))
+                            | (omit['^'] >> (char_ - (space | eol)))
+                            | char_('^')
+                            )
+                    ]
+                >> omit[*(char_ - eol)]
+             ];
 
-                command = 
-                       *(at_mark| eqGarbage)
-                    >> (  cmdIf                 [ref(stat.m_ifCommands) += 1]
-                        | cmdFor                [ref(stat.m_forCommands) += 1]
-                        | cmdCustom             [onCmd]
-                        )
-                    >> *eqGarbage;
-
-                label %= skip(blank)
-                [
-                       omit[   -(+omit[redirect] | (char_ - ':'))
-                            >> *eqGarbage
-                            >> ':'
-                            >> *eqGarbage
-                            ]
-                    >> lexeme[
-                              +(  (char_ - (space | '^'))
-                                | (omit['^'] >> (char_ - (space | eol)))
-                                | char_('^')
-                                )
-                        ]
-                    >> omit[*(char_ - eol)]
-                 ];
-
-                comment %= skip(blank)
-                [
-                       *(at_mark| eqGarbage)
-                    >> no_case["REM"]
-                    >> lexeme[*(char_ - eol)]
-                 ];
-                
-                group =
-                       *(at_mark| eqGarbage | redirect| lexeme['^' >> eol])
-                    >> char_('(')               [ref(bracketsLevel) += 1]
-                    >> *expression
-                    >> (char_(')') | eoi)       [ref(bracketsLevel) -= 1]
-                    >> *(  eqGarbage
-                         | redirect 
-                         | lexeme['^' >> eol]
-                         | (eps(ref(bracketsLevel) == 0) >> omit[+char_(')')]) // skip all extra closing brackets
-                         );
-                
-                operation = (lit("&&") | "||" | '|' | '&');
-
-                operand =
-                      group
-                    | comment                   [ref(stat.m_comments) += 1]
-                    | command
-                    | label                     [ref(stat.m_labels) += 1] // TODO: Match but don't report label if it's not at the begin of line
-                    | +(at_mark | eqGarbage | redirect); // the rest mailformed shit
-
-                expression =
-                       operand
-                    >> *(   operation
-                         >> -expression // we are tolerant to errors as much as possible
-                         );
-                
-                batch =
-                       eps                      [ref(bracketsLevel) = 0]
-                    >> *(expression);
-            }
+            comment %= skip(blank)
+            [
+                   *(at_mark| eqGarbage)
+                >> no_case["REM"]
+                >> lexeme[*(char_ - eol)]
+             ];
             
-            long bracketsLevel; // TODO: move into attributes
-            boost::spirit::qi::rule<Iterator, std::string()> arg;
-            boost::spirit::qi::rule<Iterator, std::string()> argWithGarbage;
-            boost::spirit::qi::rule<Iterator> eqGarbage;
-            boost::spirit::qi::rule<Iterator> at_mark;
-            boost::spirit::qi::rule<Iterator> redirect;
-            boost::spirit::qi::rule<Iterator, CommandWithArgs()> cmdCustom;     // It have to has blank_type skipper, but compilation fails in such case. Why?
-            boost::spirit::qi::rule<Iterator> cmdIf;                            // same problem
-            boost::spirit::qi::rule<Iterator> cmdFor;                           // same problem
-            boost::spirit::qi::rule<Iterator> command;                          // same problem
-            boost::spirit::qi::rule<Iterator, std::string()> label;             // same problem
-            boost::spirit::qi::rule<Iterator, std::string()> comment;           // same problem
-            boost::spirit::qi::rule<Iterator, Skipper> expression;
-            boost::spirit::qi::rule<Iterator, Skipper> group;
-            boost::spirit::qi::rule<Iterator, Skipper> operand;
-            boost::spirit::qi::rule<Iterator, Skipper> operation;
-            boost::spirit::qi::rule<Iterator, Skipper> batch;
-        };
+            group =
+                   *(at_mark| eqGarbage | redirect| lexeme['^' >> eol])
+                >> char_('(')               [ref(bracketsLevel) += 1]
+                >> *expression
+                >> (char_(')') | eoi)       [ref(bracketsLevel) -= 1]
+                >> *(  eqGarbage
+                     | redirect 
+                     | lexeme['^' >> eol]
+                     | (eps(ref(bracketsLevel) == 0) >> omit[+char_(')')]) // skip all extra closing brackets
+                     );
+            
+            operation = (lit("&&") | "||" | '|' | '&');
+
+            operand =
+                  group
+                | comment                   [ref(stat.m_comments) += 1]
+                | command
+                | label                     [ref(stat.m_labels) += 1] // TODO: Match but don't report label if it's not at the begin of line
+                | +(at_mark | eqGarbage | redirect); // the rest mailformed shit
+
+            expression =
+                   operand
+                >> *(   operation
+                     >> -expression // we are tolerant to errors as much as possible
+                     );
+            
+            batch =
+                   eps                      [ref(bracketsLevel) = 0]
+                >> *(expression);
+        }
         
-    }
+        long bracketsLevel; // TODO: move into attributes
+        boost::spirit::qi::rule<Iterator, std::string()> arg;
+        boost::spirit::qi::rule<Iterator, std::string()> argWithGarbage;
+        boost::spirit::qi::rule<Iterator> eqGarbage;
+        boost::spirit::qi::rule<Iterator> at_mark;
+        boost::spirit::qi::rule<Iterator> redirect;
+        boost::spirit::qi::rule<Iterator, Command()> cmdCustom;             // It have to has blank_type skipper, but compilation fails in such case. Why?
+        boost::spirit::qi::rule<Iterator> cmdIf;                            // same problem
+        boost::spirit::qi::rule<Iterator> cmdFor;                           // same problem
+        boost::spirit::qi::rule<Iterator> command;                          // same problem
+        boost::spirit::qi::rule<Iterator, std::string()> label;             // same problem
+        boost::spirit::qi::rule<Iterator, std::string()> comment;           // same problem
+        boost::spirit::qi::rule<Iterator, ns::space_type> expression;
+        boost::spirit::qi::rule<Iterator, ns::space_type> group;
+        boost::spirit::qi::rule<Iterator, ns::space_type> operand;
+        boost::spirit::qi::rule<Iterator, ns::space_type> operation;
+        boost::spirit::qi::rule<Iterator, ns::space_type> batch;
+    };
     
-    template<typename Iterator>
-    inline bool parse(Iterator first, Iterator last)
+    template<typename Iterator, typename CommandAction>
+    inline bool parse(Iterator& first, Iterator last, Statistic& statistic, CommandAction onCmd)
     {
         namespace qi = boost::spirit::qi;
-        namespace ascii = boost::spirit::ascii;
-        namespace phoenix = boost::phoenix;
-        
-        detail::BatchFileStatistic stat;
-        detail::BatchFileGrammar<Iterator> grammar(
-            stat,
-            detail::printCmd);
-        
-        
-        bool r = phrase_parse(
-                              first,
-                              last,
-                              grammar,
-                              detail::Skipper()
-                              );
 
-        std::cout
-            << "@: " << stat.m_atMarks << std::endl
-            << "IFs: " << stat.m_ifCommands << std::endl
-            << "FORs: " << stat.m_forCommands << std::endl
-            << "Labels: " << stat.m_labels << std::endl
-            << "Comments: " << stat.m_comments << std::endl
+        Grammar<Iterator> grammar(statistic, onCmd);
+        
+        return qi::phrase_parse(first, last, grammar, ns::space);
+    }
+
+        /*
             << (r ? "OK" : "FAIL") << std::endl;
         
         if (first != last)
@@ -393,7 +292,7 @@ namespace batch_parser
         }
         
         return true;
-    }
+    }*/
 }
 
 #endif
