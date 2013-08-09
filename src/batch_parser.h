@@ -171,11 +171,9 @@ namespace batch_parser
             [
                    no_case["FOR"]
                 >> *eqGarbage
-                >> -lexeme[lit('/') >> alpha]
+                >> -lexeme[lit('/') >> alpha] // condition type switch (/D, /R, /L or /F)
                 >> *eqGarbage
-                >> -(!lit('%') >> argWithGarbage)
-                /*>> -(drive)*/
-                /*>> -(options)*/
+                >> -(!lit('%') >> argWithGarbage) // dir (for /R) or options (for /F)
                 >> lexeme[lit("%%") >> alpha]
                 >> *eqGarbage
                 >> no_case["IN"]
