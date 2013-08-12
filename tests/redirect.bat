@@ -24,3 +24,7 @@ echo foo >^
 rem FAIL ("bad syntax"). 2 or more spaces before 'outfile' not OK:
 echo foo >^
   outfile
+
+>outfile echo 33
+echo 44 >outfile 55
+echo==========>outfile ====66====77
