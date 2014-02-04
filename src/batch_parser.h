@@ -1,6 +1,3 @@
-//  Created by Andrey Upadyshev aka Oliora.
-//  This code was released to Public domain.
-
 #ifndef batch_parser_batch_parser_h
 #define batch_parser_batch_parser_h
 
